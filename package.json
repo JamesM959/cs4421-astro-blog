@@ -1,5 +1,5 @@
 {
-  "name": "my-astro-blog-2",
+  "name": "my-astro-blog",
   "type": "module",
   "version": "0.0.1",
   "engines": {
@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "check": "astro check",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -20,5 +21,9 @@
   },
   "allowScripts": {
     "esbuild": true
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^6.0.3"
   }
 }
