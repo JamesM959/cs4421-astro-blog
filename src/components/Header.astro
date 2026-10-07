@@ -6,12 +6,12 @@ import HeaderLink from './HeaderLink.astro';
 <header>
 	<nav>
 		<h2><a href="/">{SITE_TITLE}</a></h2>
-		<div class="internal-links">
+		<div class="internal-links" id="primary-links">
 			<HeaderLink href="/">Home</HeaderLink>
 			<HeaderLink href="/blog">Blog</HeaderLink>
 			<HeaderLink href="/about">About</HeaderLink>
 		</div>
-		<div class="social-links">
+		<div class="social-links" id="social-links">
 			<a href="https://m.webtoo.ls/@astro" target="_blank">
 				<span class="sr-only">Follow Astro on Mastodon</span>
 				<svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32"
@@ -40,10 +40,45 @@ import HeaderLink from './HeaderLink.astro';
 				>
 			</a>
 		</div>
+		<button
+			class="nav-toggle"
+			type="button"
+			aria-label="Minimize navigation"
+			aria-expanded="true"
+			aria-controls="primary-links social-links"
+			title="Minimize navigation"
+		>
+			<span aria-hidden="true">-</span>
+		</button>
 	</nav>
 </header>
+<script>
+	const header = document.querySelector('header');
+	const toggle = header?.querySelector<HTMLButtonElement>('.nav-toggle');
+
+	if (header && toggle) {
+		const storageKey = 'site-nav-minimized';
+		const setMinimized = (minimized: boolean) => {
+			header.classList.toggle('nav-minimized', minimized);
+			toggle.setAttribute('aria-expanded', String(!minimized));
+			toggle.setAttribute('aria-label', minimized ? 'Expand navigation' : 'Minimize navigation');
+			toggle.title = minimized ? 'Expand navigation' : 'Minimize navigation';
+			toggle.textContent = minimized ? '+' : '-';
+		};
+
+		setMinimized(localStorage.getItem(storageKey) === 'true');
+		toggle.addEventListener('click', () => {
+			const minimized = toggle.getAttribute('aria-expanded') === 'true';
+			setMinimized(minimized);
+			localStorage.setItem(storageKey, String(minimized));
+		});
+	}
+</script>
 <style>
 	header {
+		position: sticky;
+		top: 0;
+		z-index: 10;
 		margin: 0;
 		padding: 0 1em;
 		background: white;
@@ -76,6 +111,26 @@ import HeaderLink from './HeaderLink.astro';
 	.social-links,
 	.social-links a {
 		display: flex;
+	}
+	.nav-minimized .internal-links,
+	.nav-minimized .social-links {
+		display: none;
+	}
+	.nav-toggle {
+		display: grid;
+		place-items: center;
+		width: 40px;
+		height: 40px;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--black);
+		font-size: 1.25rem;
+		cursor: pointer;
+	}
+	.nav-toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 	@media (max-width: 720px) {
 		.social-links {
