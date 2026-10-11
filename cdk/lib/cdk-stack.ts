@@ -19,7 +19,6 @@ export class StaticSiteStack extends cdk.Stack {
 
     // S3 bucket for website content
     const bucket = new s3.Bucket(this, 'SiteBucket', {
-      bucketName: 'site-assets',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     });
