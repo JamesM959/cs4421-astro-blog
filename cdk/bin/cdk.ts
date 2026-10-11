@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib/core';
-import { AstroBlogStack } from '../lib/cdk-stack';
+import { StaticSiteStack } from '../lib/cdk-stack';
 
 const app = new cdk.App();
-new AstroBlogStack(app, 'AstroBlogStack', {
+new StaticSiteStack(app, 'StaticSiteStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
