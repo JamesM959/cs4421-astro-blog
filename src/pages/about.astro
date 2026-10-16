@@ -1,63 +1,548 @@
 ---
-import AboutHeroImage from '../assets/blog-placeholder-about.jpg';
 import Layout from '../layouts/BlogPost.astro';
 ---
 
 <Layout
 	title="About Me"
-	description="Lorem ipsum dolor sit amet"
+	description="Learn about this blog and search public companies by name or ticker."
 	pubDate={new Date('August 08 2021')}
-	heroImage={AboutHeroImage}
+	
 >
-	<p>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-		labore et dolore magna aliqua. Vitae ultricies leo integer malesuada nunc vel risus commodo
-		viverra. Adipiscing enim eu turpis egestas pretium. Euismod elementum nisi quis eleifend quam
-		adipiscing. In hac habitasse platea dictumst vestibulum. Sagittis purus sit amet volutpat. Netus
-		et malesuada fames ac turpis egestas. Eget magna fermentum iaculis eu non diam phasellus
-		vestibulum lorem. Varius sit amet mattis vulputate enim. Habitasse platea dictumst quisque
-		sagittis. Integer quis auctor elit sed vulputate mi. Dictumst quisque sagittis purus sit amet.
-	</p>
 
-	<p>
-		Morbi tristique senectus et netus. Id semper risus in hendrerit gravida rutrum quisque non
-		tellus. Habitasse platea dictumst quisque sagittis purus sit amet. Tellus molestie nunc non
-		blandit massa. Cursus vitae congue mauris rhoncus. Accumsan tortor posuere ac ut. Fringilla urna
-		porttitor rhoncus dolor. Elit ullamcorper dignissim cras tincidunt lobortis. In cursus turpis
-		massa tincidunt dui ut ornare lectus. Integer feugiat scelerisque varius morbi enim nunc.
-		Bibendum neque egestas congue quisque egestas diam. Cras ornare arcu dui vivamus arcu felis
-		bibendum. Dignissim suspendisse in est ante in nibh mauris. Sed tempus urna et pharetra pharetra
-		massa massa ultricies mi.
-	</p>
 
-	<p>
-		Mollis nunc sed id semper risus in. Convallis a cras semper auctor neque. Diam sit amet nisl
-		suscipit. Lacus viverra vitae congue eu consequat ac felis donec. Egestas integer eget aliquet
-		nibh praesent tristique magna sit amet. Eget magna fermentum iaculis eu non diam. In vitae
-		turpis massa sed elementum. Tristique et egestas quis ipsum suspendisse ultrices. Eget lorem
-		dolor sed viverra ipsum. Vel turpis nunc eget lorem dolor sed viverra. Posuere ac ut consequat
-		semper viverra nam. Laoreet suspendisse interdum consectetur libero id faucibus. Diam phasellus
-		vestibulum lorem sed risus ultricies tristique. Rhoncus dolor purus non enim praesent elementum
-		facilisis. Ultrices tincidunt arcu non sodales neque. Tempus egestas sed sed risus pretium quam
-		vulputate. Viverra suspendisse potenti nullam ac tortor vitae purus faucibus ornare. Fringilla
-		urna porttitor rhoncus dolor purus non. Amet dictum sit amet justo donec enim.
-	</p>
-
-	<p>
-		Mattis ullamcorper velit sed ullamcorper morbi tincidunt. Tortor posuere ac ut consequat semper
-		viverra. Tellus mauris a diam maecenas sed enim ut sem viverra. Venenatis urna cursus eget nunc
-		scelerisque viverra mauris in. Arcu ac tortor dignissim convallis aenean et tortor at. Curabitur
-		gravida arcu ac tortor dignissim convallis aenean et tortor. Egestas tellus rutrum tellus
-		pellentesque eu. Fusce ut placerat orci nulla pellentesque dignissim enim sit amet. Ut enim
-		blandit volutpat maecenas volutpat blandit aliquam etiam. Id donec ultrices tincidunt arcu. Id
-		cursus metus aliquam eleifend mi.
-	</p>
-
-	<p>
-		Tempus quam pellentesque nec nam aliquam sem. Risus at ultrices mi tempus imperdiet. Id porta
-		nibh venenatis cras sed felis eget velit. Ipsum a arcu cursus vitae. Facilisis magna etiam
-		tempor orci eu lobortis elementum. Tincidunt dui ut ornare lectus sit. Quisque non tellus orci
-		ac. Blandit libero volutpat sed cras. Nec tincidunt praesent semper feugiat nibh sed pulvinar
-		proin gravida. Egestas integer eget aliquet nibh praesent tristique magna.
-	</p>
+	<section class="company-search" aria-labelledby="company-search-title">
+		<p class="eyebrow">Market directory</p>
+		<h2 id="company-search-title">Search public companies</h2>
+		<p class="search-description">Look up a company by name or ticker symbol. Results are provided by Yahoo Finance.</p>
+		<form id="company-search-form" role="search">
+			<label for="company-search-query">Company name or ticker</label>
+			<div class="search-controls">
+				<input id="company-search-query" name="q" type="search" maxlength="80" placeholder="Try Apple or AAPL" autocomplete="off" required />
+				<button type="submit">Search</button>
+			</div>
+		</form>
+		<p id="company-search-status" class="search-status" role="status" aria-live="polite">Enter a company name or ticker to begin.</p>
+		<ul id="company-search-results" class="search-results" aria-label="Company search results" hidden></ul>
+		<section id="performance-panel" class="performance-panel" aria-labelledby="performance-title" hidden>
+			<div class="performance-heading">
+				<div>
+					<p id="range-title" class="eyebrow">Past year</p>
+					<h3 id="performance-title"></h3>
+				</div>
+				<p id="period-change" class="period-change"></p>
+			</div>
+			<p id="chart-status" class="search-status" role="status" aria-live="polite"></p>
+			<svg id="stock-chart" class="stock-chart" viewBox="0 0 760 340" role="img" aria-hidden="true"></svg>
+			<div class="range-controls" role="group" aria-label="Stock chart time range">
+				<button type="button" data-range="5d" aria-pressed="false">Week</button>
+				<button type="button" data-range="1mo" aria-pressed="false">Month</button>
+				<button type="button" data-range="1y" aria-pressed="true">Year</button>
+				<button type="button" data-range="5y" aria-pressed="false">5 years</button>
+				<button type="button" data-range="max" aria-pressed="false">Past performance</button>
+			</div>
+			<p class="chart-footnote">Historical share prices are not a guarantee of future performance.</p>
+		</section>
+	</section>
 </Layout>
+
+<style>
+	:global(.title) {
+		display: none;
+	}
+</style>
+
+<script>
+	interface CompanyResult {
+		symbol: string;
+		name: string;
+		exchange: string;
+	}
+	interface PricePoint {
+		date: string;
+		close: number;
+	}
+	interface CompanyHistory {
+		symbol: string;
+		name: string;
+		currency: string;
+		interval: '1d' | '1mo';
+		prices: PricePoint[];
+	}
+	type HistoryRange = '5d' | '1mo' | '1y' | '5y' | 'max';
+	const rangeLabels: Record<HistoryRange, string> = {
+		'5d': 'Past week',
+		'1mo': 'Past month',
+		'1y': 'Past year',
+		'5y': 'Past 5 years',
+		max: 'Past performance',
+	};
+
+	const form = document.querySelector<HTMLFormElement>('#company-search-form');
+	const queryField = document.querySelector<HTMLInputElement>('#company-search-query');
+	const status = document.querySelector<HTMLElement>('#company-search-status');
+	const results = document.querySelector<HTMLUListElement>('#company-search-results');
+	const submitButton = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+	const performancePanel = document.querySelector<HTMLElement>('#performance-panel');
+	const performanceTitle = document.querySelector<HTMLElement>('#performance-title');
+	const rangeTitle = document.querySelector<HTMLElement>('#range-title');
+	const periodChange = document.querySelector<HTMLElement>('#period-change');
+	const chartStatus = document.querySelector<HTMLElement>('#chart-status');
+	const stockChart = document.querySelector<SVGSVGElement>('#stock-chart');
+	const rangeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.range-controls [data-range]'));
+	let chartRequest: AbortController | undefined;
+	let selectedCompany: CompanyResult | undefined;
+
+	const drawStockChart = (history: CompanyHistory, range: HistoryRange) => {
+		if (!stockChart || history.prices.length === 0) return;
+		const width = 760;
+		const height = 340;
+		const padding = { top: 20, right: 20, bottom: 42, left: 84 };
+		const plotWidth = width - padding.left - padding.right;
+		const plotHeight = height - padding.top - padding.bottom;
+		const timestamps = history.prices.map((point) => new Date(point.date).getTime());
+		const values = history.prices.map((point) => point.close);
+		const firstTime = timestamps[0];
+		const timeRange = timestamps[timestamps.length - 1] - firstTime || 1;
+		const minValue = Math.min(...values);
+		const maxValue = Math.max(...values);
+		const valuePadding = (maxValue - minValue || maxValue * 0.1 || 1) * 0.1;
+		const lowerBound = Math.max(0, minValue - valuePadding);
+		const upperBound = maxValue + valuePadding;
+		const valueRange = upperBound - lowerBound || 1;
+		const makeSvg = (tag: string, attributes: Record<string, string>) => {
+			const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+			for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+			return element;
+		};
+		const currency = /^[A-Z]{3}$/.test(history.currency) ? history.currency : 'USD';
+		let formatPrice: (value: number) => string;
+		try {
+			const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 });
+			formatPrice = (value) => formatter.format(value);
+		} catch {
+			const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
+			formatPrice = (value) => formatter.format(value);
+		}
+		const points = history.prices.map((point, index) => {
+			const x = padding.left + ((timestamps[index] - firstTime) / timeRange) * plotWidth;
+			const y = padding.top + (1 - (point.close - lowerBound) / valueRange) * plotHeight;
+			return { x, y };
+		});
+		const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
+		const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${height - padding.bottom} L ${points[0].x.toFixed(2)} ${height - padding.bottom} Z`;
+		const change = ((values[values.length - 1] / values[0]) - 1) * 100;
+		const trend = change >= 0 ? 'positive' : 'negative';
+		const grid = makeSvg('g', { class: 'stock-chart-grid', 'aria-hidden': 'true' });
+		const yLabels = makeSvg('g', { class: 'stock-chart-labels', 'aria-hidden': 'true' });
+		for (let index = 0; index < 5; index += 1) {
+			const fraction = index / 4;
+			const y = padding.top + fraction * plotHeight;
+			const value = upperBound - fraction * valueRange;
+			grid.append(makeSvg('line', { x1: String(padding.left), y1: String(y), x2: String(width - padding.right), y2: String(y) }));
+			const label = makeSvg('text', { x: String(padding.left - 12), y: String(y + 4), 'text-anchor': 'end' });
+			label.textContent = formatPrice(value);
+			yLabels.append(label);
+		}
+		const xLabels = makeSvg('g', { class: 'stock-chart-labels', 'aria-hidden': 'true' });
+		const dateOptions: Intl.DateTimeFormatOptions = range === '5d'
+			? { month: 'short', day: 'numeric' }
+			: range === '1mo'
+				? { month: 'short', day: 'numeric' }
+				: range === 'max'
+					? { year: 'numeric' }
+					: { month: 'short', year: 'numeric' };
+		const dateFormat = new Intl.DateTimeFormat(undefined, dateOptions);
+		for (let index = 0; index < 5; index += 1) {
+			const pointIndex = Math.round((history.prices.length - 1) * (index / 4));
+			const label = makeSvg('text', {
+				x: String(padding.left + (index / 4) * plotWidth),
+				y: String(height - 10),
+				'text-anchor': index === 0 ? 'start' : index === 4 ? 'end' : 'middle',
+			});
+			label.textContent = dateFormat.format(new Date(history.prices[pointIndex].date));
+			xLabels.append(label);
+		}
+
+		const area = makeSvg('path', { class: `stock-chart-area ${trend}`, d: areaPath });
+		const line = makeSvg('path', { class: `stock-chart-line ${trend}`, d: linePath });
+		stockChart.replaceChildren(grid, yLabels, area, line, xLabels);
+			stockChart.setAttribute('aria-label', `${history.name} (${history.symbol}) share price history, ${rangeLabels[range].toLowerCase()}`);
+		stockChart.classList.add('is-visible');
+		stockChart.setAttribute('aria-hidden', 'false');
+		if (periodChange) {
+			periodChange.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+			periodChange.className = `period-change ${trend}`;
+		}
+	};
+
+	const showCompanyHistory = async (company: CompanyResult, range: HistoryRange = '1y') => {
+		if (!performancePanel || !performanceTitle || !rangeTitle || !chartStatus || !stockChart) return;
+		chartRequest?.abort();
+		const request = new AbortController();
+		chartRequest = request;
+		performancePanel.hidden = false;
+		performanceTitle.textContent = `${company.name} (${company.symbol})`;
+		rangeTitle.textContent = rangeLabels[range];
+		chartStatus.textContent = `Loading ${rangeLabels[range].toLowerCase()} price history…`;
+		stockChart.classList.remove('is-visible');
+		stockChart.setAttribute('aria-hidden', 'true');
+		stockChart.replaceChildren();
+		if (periodChange) periodChange.textContent = '';
+
+		try {
+			const response = await fetch(`/Api/finance/chart/${encodeURIComponent(company.symbol)}?range=${range}`, { signal: request.signal });
+			const payload: unknown = await response.json();
+			if (!response.ok) {
+				const message = typeof payload === 'object' && payload !== null && 'error' in payload
+					&& typeof payload.error === 'string'
+					? payload.error
+					: 'Price history is temporarily unavailable.';
+				throw new Error(message);
+			}
+			if (typeof payload !== 'object' || payload === null || !('prices' in payload) || !Array.isArray(payload.prices)) {
+				throw new Error('Unexpected response from price history.');
+			}
+			const history = payload as CompanyHistory;
+			if (history.prices.length === 0) throw new Error('No price history is available for this company.');
+			drawStockChart(history, range);
+			chartStatus.textContent = `${history.interval === '1mo' ? 'Monthly' : 'Daily'} closing prices, shown in ${history.currency}.`;
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return;
+			chartStatus.textContent = error instanceof Error ? error.message : 'Price history could not be reached.';
+		} finally {
+			if (chartRequest === request) chartRequest = undefined;
+		}
+	};
+
+	for (const button of rangeButtons) {
+		button.addEventListener('click', () => {
+			if (!selectedCompany) return;
+			const range = button.dataset.range as HistoryRange;
+			for (const rangeButton of rangeButtons) {
+				rangeButton.setAttribute('aria-pressed', String(rangeButton === button));
+			}
+			showCompanyHistory(selectedCompany, range);
+		});
+	}
+
+	form?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const query = queryField?.value.trim();
+		if (!query || !status || !results || !submitButton) return;
+
+		results.replaceChildren();
+		results.hidden = true;
+		performancePanel?.setAttribute('hidden', '');
+		chartRequest?.abort();
+		status.textContent = 'Searching companies…';
+		submitButton.disabled = true;
+
+		try {
+			const response = await fetch(`/Api/finance/search?q=${encodeURIComponent(query)}`);
+			const payload: unknown = await response.json();
+			if (!response.ok) {
+				const message = typeof payload === 'object' && payload !== null && 'error' in payload
+					&& typeof payload.error === 'string'
+					? payload.error
+					: 'Company search is temporarily unavailable.';
+				throw new Error(message);
+			}
+			if (!Array.isArray(payload)) throw new Error('Unexpected response from company search.');
+
+			const companies = payload as CompanyResult[];
+			if (companies.length === 0) {
+				status.textContent = 'No listed companies found. Try another name or ticker.';
+				return;
+			}
+
+			for (const company of companies) {
+				const item = document.createElement('li');
+				item.className = 'search-result';
+				const option = document.createElement('button');
+				option.type = 'button';
+				option.className = 'company-option';
+				option.setAttribute('aria-label', `View stock performance for ${company.name} (${company.symbol})`);
+				const identity = document.createElement('div');
+				identity.className = 'company-identity';
+				const symbol = document.createElement('strong');
+				symbol.className = 'company-symbol';
+				symbol.textContent = company.symbol;
+				const name = document.createElement('span');
+				name.className = 'company-name';
+				name.textContent = company.name;
+				identity.append(symbol, name);
+				option.append(identity);
+				if (company.exchange) {
+					const exchange = document.createElement('span');
+					exchange.className = 'company-exchange';
+					exchange.textContent = company.exchange;
+					option.append(exchange);
+				}
+				option.addEventListener('click', () => {
+					selectedCompany = company;
+					results.hidden = true;
+					results.replaceChildren();
+					status.textContent = `Selected ${company.name} (${company.symbol}).`;
+					for (const rangeButton of rangeButtons) {
+						rangeButton.setAttribute('aria-pressed', String(rangeButton.dataset.range === '1y'));
+					}
+					showCompanyHistory(company, '1y');
+				});
+				item.append(option);
+				results.append(item);
+			}
+
+			results.hidden = false;
+				selectedCompany = undefined;
+			status.textContent = `${companies.length} ${companies.length === 1 ? 'company' : 'companies'} found.`;
+		} catch (error) {
+			status.textContent = error instanceof Error ? error.message : 'Company search could not be reached.';
+		} finally {
+			submitButton.disabled = false;
+		}
+	});
+</script>
+
+<style>
+	.company-search {
+		margin: 2.5rem 0;
+		border-top: 1px solid rgb(var(--gray-light));
+		padding-top: 1.5rem;
+	}
+	.eyebrow {
+		margin: 0 0 0.4rem;
+		color: #26735e;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.company-search h2 {
+		margin: 0;
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 1.8rem;
+		font-weight: 400;
+	}
+	.search-description {
+		margin: 0.5rem 0 1.25rem;
+		color: #68736e;
+		font-size: 0.9rem;
+	}
+	#company-search-form label {
+		display: block;
+		margin-bottom: 0.4rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+	.search-controls {
+		display: flex;
+		gap: 0.6rem;
+	}
+	.search-controls input {
+		width: 100%;
+		min-width: 0;
+		min-height: 48px;
+		border: 1px solid #cbd3cd;
+		border-radius: 3px;
+		padding: 0.65rem 0.75rem;
+		font: inherit;
+		font-size: 1rem;
+	}
+	.search-controls input:focus-visible {
+		outline: 2px solid #26735e;
+		outline-offset: 2px;
+	}
+	.search-controls button {
+		flex: 0 0 auto;
+		min-height: 48px;
+		border: 0;
+		border-radius: 3px;
+		background: #174e40;
+		padding: 0.65rem 1rem;
+		color: #fff;
+		font: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.search-controls button:hover:not(:disabled) {
+		background: #26735e;
+	}
+	.search-controls button:disabled {
+		cursor: wait;
+		opacity: 0.65;
+	}
+	.search-controls button:focus-visible {
+		outline: 3px solid #95c7ae;
+		outline-offset: 3px;
+	}
+	.search-status {
+		margin: 1rem 0 0;
+		color: #68736e;
+		font-size: 0.85rem;
+	}
+	.search-results {
+		margin: 0.75rem 0 0;
+		padding: 0;
+		border-top: 1px solid rgb(var(--gray-light));
+		list-style: none;
+	}
+	:global(.search-result) {
+		border-bottom: 1px solid rgb(var(--gray-light));
+	}
+	:global(.company-option) {
+		display: flex;
+		width: 100%;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		border: 0;
+		background: transparent;
+		padding: 0.8rem 0;
+		color: inherit;
+		text-align: left;
+		font: inherit;
+		cursor: pointer;
+	}
+	:global(.company-option:hover) {
+		background: #f3f7f4;
+	}
+	:global(.company-option:focus-visible) {
+		outline: 2px solid #26735e;
+		outline-offset: -2px;
+	}
+	:global(.company-identity) {
+		display: grid;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+	:global(.company-symbol) {
+		color: #174e40;
+		font-size: 0.95rem;
+	}
+	:global(.company-name),
+	:global(.company-exchange) {
+		color: #68736e;
+		font-size: 0.8rem;
+	}
+	:global(.company-name) {
+		overflow-wrap: anywhere;
+	}
+	:global(.company-exchange) {
+		flex: 0 0 auto;
+		text-align: right;
+	}
+	.performance-panel {
+		margin-top: 2rem;
+		border-top: 1px solid rgb(var(--gray-light));
+		padding-top: 1.5rem;
+	}
+	.performance-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+	.performance-heading .eyebrow {
+		margin-bottom: 0.35rem;
+	}
+	.performance-heading h3 {
+		margin: 0;
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 1.5rem;
+		font-weight: 400;
+	}
+	.period-change {
+		margin: 0;
+		font-size: 1.15rem;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+	:global(.period-change.positive) {
+		color: #26735e;
+	}
+	:global(.period-change.negative) {
+		color: #a33d2e;
+	}
+	.range-controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin-top: 0.75rem;
+	}
+	.range-controls button {
+		min-height: 38px;
+		border: 1px solid #cbd3cd;
+		border-radius: 3px;
+		background: #fff;
+		padding: 0.45rem 0.7rem;
+		color: #46514c;
+		font: inherit;
+		font-size: 0.8rem;
+		cursor: pointer;
+	}
+	.range-controls button[aria-pressed='true'] {
+		border-color: #174e40;
+		background: #174e40;
+		color: #fff;
+	}
+	.range-controls button:focus-visible {
+		outline: 3px solid #95c7ae;
+		outline-offset: 2px;
+	}
+	.stock-chart {
+		display: none;
+		width: 100%;
+		height: auto;
+		margin-top: 0.5rem;
+		overflow: visible;
+	}
+	.stock-chart.is-visible {
+		display: block;
+	}
+	:global(.stock-chart-grid line) {
+		stroke: #dfe5df;
+		stroke-width: 1;
+		vector-effect: non-scaling-stroke;
+	}
+	:global(.stock-chart-labels) {
+		fill: #78817c;
+		font-family: var(--font-atkinson);
+		font-size: 12px;
+	}
+	:global(.stock-chart-area.positive) {
+		fill: #d9eee4;
+		opacity: 0.8;
+	}
+	:global(.stock-chart-area.negative) {
+		fill: #f5dfd9;
+		opacity: 0.8;
+	}
+	:global(.stock-chart-line) {
+		fill: none;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 3;
+		vector-effect: non-scaling-stroke;
+	}
+	:global(.stock-chart-line.positive) {
+		stroke: #26735e;
+	}
+	:global(.stock-chart-line.negative) {
+		stroke: #a33d2e;
+	}
+	.chart-footnote {
+		margin: 0.25rem 0 0;
+		color: #68736e;
+		font-size: 0.75rem;
+	}
+	@media (max-width: 520px) {
+		.search-controls {
+			flex-direction: column;
+		}
+		.performance-heading {
+			align-items: start;
+			flex-direction: column;
+		}
+	}
+</style>
