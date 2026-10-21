@@ -3,26 +3,58 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 
-const initialAmount = 100;
+const initialAmount = 1000;
 const initialRate = 8;
+const initialMonthlyContribution = 50;
 const initialYears = 40;
 const chartWidth = 760;
 const chartHeight = 320;
 const chartPadding = { top: 20, right: 20, bottom: 40, left: 76 };
-const initialValues = Array.from({ length: initialYears + 1 }, (_, year) =>
-	initialAmount * (1 + initialRate / 100) ** year,
+const initialMonthlyRate = (1 + initialRate / 100) ** (1 / 12) - 1;
+const initialValues = [initialAmount];
+let initialBalance = initialAmount;
+for (let year = 1; year <= initialYears; year += 1) {
+	for (let month = 0; month < 12; month += 1) {
+		initialBalance = initialBalance * (1 + initialMonthlyRate) + initialMonthlyContribution;
+	}
+	initialValues.push(initialBalance);
+}
+const initialContributions = Array.from(
+	{ length: initialYears + 1 },
+	(_, year) => initialAmount + year * 12 * initialMonthlyContribution,
 );
 const initialMax = initialValues[initialValues.length - 1] * 1.08;
 const plotWidth = chartWidth - chartPadding.left - chartPadding.right;
 const plotHeight = chartHeight - chartPadding.top - chartPadding.bottom;
-const initialPath = initialValues
+const makePath = (values: number[]) => values
 	.map((value, year) => {
 		const x = chartPadding.left + (year / initialYears) * plotWidth;
 		const y = chartPadding.top + (1 - value / initialMax) * plotHeight;
 		return `${year === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
 	})
 	.join(' ');
+const makeAreaPath = (upper: number[], lower: number[]) => {
+	const upperPath = makePath(upper);
+	const lowerPath = Array.from({ length: lower.length }, (_, index) => {
+			const year = lower.length - 1 - index;
+			const value = lower[year];
+			const x = chartPadding.left + (year / initialYears) * plotWidth;
+			const y = chartPadding.top + (1 - value / initialMax) * plotHeight;
+			return `L ${x.toFixed(2)} ${y.toFixed(2)}`;
+		})
+		.join(' ');
+	return `${upperPath} ${lowerPath} Z`;
+};
+const initialPath = makePath(initialValues);
+const initialStartingArea = makeAreaPath(
+	Array(initialYears + 1).fill(initialAmount),
+	Array(initialYears + 1).fill(0),
+);
+const initialContributionArea = makeAreaPath(initialContributions, Array(initialYears + 1).fill(initialAmount));
+const initialInterestArea = makeAreaPath(initialValues, initialContributions);
 const initialFinalValue = initialValues[initialValues.length - 1];
+const initialTotalContributions = initialAmount + initialMonthlyContribution * 12 * initialYears;
+const initialInterest = initialFinalValue - initialTotalContributions;
 const formatEuro = (value: number) =>
 	new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
 ---
@@ -55,11 +87,11 @@ const formatEuro = (value: number) =>
 						<span class="result-label">Estimated value after <span id="summary-years">40</span> years</span>
 						<strong id="final-value">{formatEuro(initialFinalValue)}</strong>
 					</div>
-					<p class="result-note"><span id="summary-principal">€100</span> invested at <span id="summary-rate">8%</span> a year <span id="summary-monthly">with no monthly additions</span></p>
+					<p class="result-note"><span id="summary-principal">{formatEuro(initialAmount)}</span> invested at <span id="summary-rate">8%</span> a year <span id="summary-monthly">plus {formatEuro(initialMonthlyContribution)}/month</span></p>
 				</div>
 
 				<div class="chart-wrap">
-					<svg id="growth-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Investment growth chart showing 100 euros growing at 8 percent annually for 40 years">
+					<svg id="growth-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`Investment growth chart showing ${formatEuro(initialAmount)} initially, with ${formatEuro(initialMonthlyContribution)} added monthly, growing at ${initialRate} percent annually for ${initialYears} years. Areas show the flat starting amount, monthly contributions and interest.`}>
 						<g class="chart-grid" aria-hidden="true">
 							{Array.from({ length: 5 }, (_, index) => {
 								const fraction = index / 4;
@@ -74,7 +106,9 @@ const formatEuro = (value: number) =>
 								return <text x={chartPadding.left - 12} y={y + 4} text-anchor="end">{formatEuro(initialMax * fraction)}</text>;
 							})}
 						</g>
-						<path id="chart-area" class="chart-area" d={`${initialPath} L ${chartWidth - chartPadding.right} ${chartHeight - chartPadding.bottom} L ${chartPadding.left} ${chartHeight - chartPadding.bottom} Z`} />
+						<path class="chart-area chart-area-starting" d={initialStartingArea} />
+						<path class="chart-area chart-area-contributions" d={initialContributionArea} />
+						<path class="chart-area chart-area-interest" d={initialInterestArea} />
 						<path id="chart-line" class="chart-line" d={initialPath} />
 						<g id="x-labels" class="chart-labels" aria-hidden="true">
 							{[0, 10, 20, 30, 40].map((year) => {
@@ -83,6 +117,11 @@ const formatEuro = (value: number) =>
 							})}
 						</g>
 					</svg>
+					<ul class="chart-legend" aria-label="Chart values">
+						<li><span class="legend-swatch legend-starting" aria-hidden="true"></span>Starting amount <strong id="legend-starting-value">{formatEuro(initialAmount)}</strong></li>
+						<li><span class="legend-swatch legend-contributions" aria-hidden="true"></span>Monthly contributions <strong id="legend-contributions-value">{formatEuro(initialTotalContributions - initialAmount)}</strong></li>
+						<li><span class="legend-swatch legend-interest" aria-hidden="true"></span>Total interest earned <strong id="legend-interest-value">{formatEuro(initialInterest)}</strong></li>
+					</ul>
 				</div>
 			</section>
 
@@ -95,7 +134,7 @@ const formatEuro = (value: number) =>
 				<form id="calculator-form">
 					<label>
 						<span>Starting amount</span>
-						<span class="input-wrap"><span aria-hidden="true">€</span><input name="amount" type="number" min="1" max="10000000" step="1" value="100" required /></span>
+						<span class="input-wrap"><span aria-hidden="true">€</span><input name="amount" type="number" min="1" max="10000000" step="1" value={initialAmount} required /></span>
 					</label>
 					<label>
 						<span>Yearly growth</span>
@@ -103,7 +142,7 @@ const formatEuro = (value: number) =>
 					</label>
 					<label>
 						<span>Monthly contribution</span>
-						<span class="input-wrap"><span aria-hidden="true">€</span><input name="monthly" type="number" min="0" max="1000000" step="1" value="0" required /></span>
+						<span class="input-wrap"><span aria-hidden="true">€</span><input name="monthly" type="number" min="0" max="1000000" step="1" value={initialMonthlyContribution} required /></span>
 					</label>
 					<label>
 						<span>Years invested</span>
@@ -154,20 +193,38 @@ const formatEuro = (value: number) =>
 		const plotHeight = height - padding.top - padding.bottom;
 		const monthlyRate = (1 + rate / 100) ** (1 / 12) - 1;
 		const data = [amount];
+		const contributions = [amount];
 		let balance = amount;
 		for (let year = 1; year <= years; year += 1) {
 			for (let month = 0; month < 12; month += 1) {
 				balance = balance * (1 + monthlyRate) + monthly;
 			}
 			data.push(balance);
+			contributions.push(amount + monthly * 12 * year);
 		}
 		const maxValue = data[data.length - 1] > 0 ? data[data.length - 1] * 1.08 : amount;
-		const path = data.map((value, year) => {
+		const makePath = (series: number[]) => series.map((value, year) => {
 			const x = padding.left + (year / years) * plotWidth;
 			const y = padding.top + (1 - value / maxValue) * plotHeight;
 			return `${year === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
 		}).join(' ');
-		const areaPath = `${path} L ${width - padding.right} ${height - padding.bottom} L ${padding.left} ${height - padding.bottom} Z`;
+		const makeAreaPath = (upper: number[], lower: number[]) => {
+			const upperPath = makePath(upper);
+			const lowerPath = Array.from({ length: lower.length }, (_, index) => {
+				const year = lower.length - 1 - index;
+				const value = lower[year];
+				const x = padding.left + (year / years) * plotWidth;
+				const y = padding.top + (1 - value / maxValue) * plotHeight;
+				return `L ${x.toFixed(2)} ${y.toFixed(2)}`;
+			}).join(' ');
+			return `${upperPath} ${lowerPath} Z`;
+		};
+		const starting = Array.from({ length: years + 1 }, () => amount);
+		const baseline = Array.from({ length: years + 1 }, () => 0);
+		const startingArea = makeAreaPath(starting, baseline);
+		const contributionArea = makeAreaPath(contributions, starting);
+		const interestArea = makeAreaPath(data, contributions);
+		const path = makePath(data);
 		const yLabels = Array.from({ length: 5 }, (_, index) => {
 			const fraction = 1 - index / 4;
 			const y = padding.top + (index / 4) * plotHeight;
@@ -183,9 +240,12 @@ const formatEuro = (value: number) =>
 			return `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`;
 		}).join('');
 
-		chart.innerHTML = `<g class="chart-grid" aria-hidden="true">${grid}</g><g class="chart-labels" aria-hidden="true">${yLabels}</g><path class="chart-area" d="${areaPath}" /><path class="chart-line" d="${path}" /><g class="chart-labels" aria-hidden="true">${xLabels}</g>`;
-		chart.setAttribute('aria-label', `Investment growth chart showing ${numberFormat.format(amount)} initially, with ${numberFormat.format(monthly)} added monthly, growing at ${rate} percent annually for ${years} years`);
+		chart.innerHTML = `<g class="chart-grid" aria-hidden="true">${grid}</g><g class="chart-labels" aria-hidden="true">${yLabels}</g><path class="chart-area chart-area-starting" d="${startingArea}" /><path class="chart-area chart-area-contributions" d="${contributionArea}" /><path class="chart-area chart-area-interest" d="${interestArea}" /><path class="chart-line" d="${path}" /><g class="chart-labels" aria-hidden="true">${xLabels}</g>`;
+		chart.setAttribute('aria-label', `Investment growth chart showing ${numberFormat.format(amount)} initially, with ${numberFormat.format(monthly)} added monthly, growing at ${rate} percent annually for ${years} years. Areas show the flat starting amount, monthly contributions and interest.`);
 		finalValue.textContent = numberFormat.format(data[data.length - 1]);
+		document.querySelector('#legend-starting-value')!.textContent = numberFormat.format(amount);
+		document.querySelector('#legend-contributions-value')!.textContent = numberFormat.format(monthly * 12 * years);
+		document.querySelector('#legend-interest-value')!.textContent = numberFormat.format(data[data.length - 1] - amount - monthly * 12 * years);
 		document.querySelector('#summary-years')!.textContent = String(years);
 		document.querySelector('#summary-principal')!.textContent = numberFormat.format(amount);
 		document.querySelector('#summary-rate')!.textContent = `${rate}%`;
@@ -291,14 +351,51 @@ const formatEuro = (value: number) =>
 		stroke-width: 1;
 		vector-effect: non-scaling-stroke;
 	}
+	.chart-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem 1.5rem;
+		margin: 0.5rem 0 0;
+		padding: 0;
+		color: #56615d;
+		font-size: 0.8rem;
+		list-style: none;
+	}
+	.chart-legend li {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.legend-swatch {
+		width: 0.75rem;
+		height: 0.75rem;
+		border-radius: 2px;
+	}
+	.legend-starting {
+		background: #75aa91;
+	}
+	.legend-contributions {
+		background: #e6bd6a;
+	}
+	.legend-interest {
+		background: #b7ddc7;
+	}
 	:global(.chart-labels) {
 		fill: #78817c;
 		font-family: var(--font-atkinson);
 		font-size: 12px;
 	}
 	:global(.chart-area) {
-		fill: #d9eee4;
-		opacity: 0.72;
+		opacity: 0.88;
+	}
+	:global(.chart-area-starting) {
+		fill: #75aa91;
+	}
+	:global(.chart-area-contributions) {
+		fill: #e6bd6a;
+	}
+	:global(.chart-area-interest) {
+		fill: #b7ddc7;
 	}
 	:global(.chart-line) {
 		fill: none;
