@@ -1,0 +1,287 @@
+.watchlist-page {
+	width: min(100% - 2rem, 52rem);
+	margin: 0 auto;
+	padding: 3rem 0;
+}
+
+.watchlist-page h1 {
+	margin: 0;
+	font-family: Georgia, 'Times New Roman', serif;
+	font-size: 2rem;
+	font-weight: 400;
+}
+
+.eyebrow {
+	margin: 0 0 0.4rem;
+	color: #26735e;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.watchlist-intro {
+	margin: 0.5rem 0 1.5rem;
+	color: #68736e;
+	font-size: 0.9rem;
+}
+
+.watchlist-status,
+.watchlist-empty {
+	color: #68736e;
+	font-size: 0.9rem;
+}
+
+.watchlist-items {
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid rgb(var(--gray-light));
+	list-style: none;
+}
+
+.watchlist-item {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto 42px;
+	align-items: center;
+	gap: 1rem;
+	border-bottom: 1px solid rgb(var(--gray-light));
+	padding: 1rem 0;
+}
+
+.watchlist-identity {
+	min-width: 0;
+}
+
+.watchlist-open {
+	display: block;
+	width: 100%;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	color: inherit;
+	text-align: left;
+	font: inherit;
+	cursor: pointer;
+}
+
+.watchlist-open:hover h2 {
+	color: #26735e;
+}
+
+.watchlist-open:focus-visible {
+	outline: 2px solid #26735e;
+	outline-offset: 4px;
+}
+
+.watchlist-identity h2 {
+	margin: 0;
+	font-family: Georgia, 'Times New Roman', serif;
+	font-size: 1.2rem;
+	font-weight: 400;
+	overflow-wrap: anywhere;
+}
+
+.watchlist-symbol,
+.watchlist-price {
+	margin: 0.2rem 0 0;
+	color: #68736e;
+	font-size: 0.85rem;
+}
+
+.watchlist-symbol {
+	color: #174e40;
+	font-weight: 700;
+}
+
+.watchlist-price {
+	text-align: right;
+}
+
+.price-unavailable {
+	color: #a33d2e;
+}
+
+.watchlist-remove {
+	display: grid;
+	width: 40px;
+	height: 40px;
+	place-items: center;
+	border: 1px solid #174e40;
+	border-radius: 50%;
+	background: #fff;
+	color: #174e40;
+	font: inherit;
+	font-size: 1.5rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.watchlist-remove:hover {
+	background: #174e40;
+	color: #fff;
+}
+
+.watchlist-remove:focus-visible {
+	outline: 3px solid #95c7ae;
+	outline-offset: 2px;
+}
+
+.watchlist-chart-panel {
+	grid-column: 1 / -1;
+	border-top: 1px solid rgb(var(--gray-light));
+	padding-top: 1rem;
+}
+
+.watchlist-chart-heading {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.watchlist-range-title {
+	margin: 0 0 0.35rem;
+	color: #26735e;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.watchlist-chart-heading h3 {
+	margin: 0;
+	font-family: Georgia, 'Times New Roman', serif;
+	font-size: 1.5rem;
+	font-weight: 400;
+}
+
+.period-change {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.period-change.positive {
+	color: #26735e;
+}
+
+.period-change.negative {
+	color: #a33d2e;
+}
+
+.watchlist-chart-status {
+	margin: 1rem 0 0;
+	color: #68736e;
+	font-size: 0.85rem;
+}
+
+.stock-chart {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 760 / 340;
+	margin-top: 0.5rem;
+	overflow: visible;
+	visibility: hidden;
+}
+
+.stock-chart.is-visible {
+	visibility: visible;
+}
+
+.stock-chart-grid line {
+	stroke: #dfe5df;
+	stroke-width: 1;
+	vector-effect: non-scaling-stroke;
+}
+
+.stock-chart-labels {
+	fill: #78817c;
+	font-family: var(--font-atkinson);
+	font-size: 12px;
+}
+
+.stock-chart-area.positive {
+	fill: #d9eee4;
+	opacity: 0.8;
+}
+
+.stock-chart-area.negative {
+	fill: #f5dfd9;
+	opacity: 0.8;
+}
+
+.stock-chart-line {
+	fill: none;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 3;
+	vector-effect: non-scaling-stroke;
+}
+
+.stock-chart-line.positive {
+	stroke: #26735e;
+}
+
+.stock-chart-line.negative {
+	stroke: #a33d2e;
+}
+
+.watchlist-range-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin-top: 0.75rem;
+}
+
+.watchlist-range-controls button {
+	min-height: 38px;
+	border: 1px solid #cbd3cd;
+	border-radius: 3px;
+	background: #fff;
+	padding: 0.45rem 0.7rem;
+	color: #46514c;
+	font: inherit;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.watchlist-range-controls button[aria-pressed='true'] {
+	border-color: #174e40;
+	background: #174e40;
+	color: #fff;
+}
+
+.watchlist-range-controls button:focus-visible {
+	outline: 3px solid #95c7ae;
+	outline-offset: 2px;
+}
+
+.watchlist-chart-footnote {
+	margin: 0.25rem 0 0;
+	color: #68736e;
+	font-size: 0.75rem;
+}
+
+@media (max-width: 520px) {
+	.watchlist-item {
+		grid-template-columns: minmax(0, 1fr) 40px;
+		gap: 0.5rem;
+	}
+
+	.watchlist-price {
+		grid-column: 1;
+		text-align: left;
+	}
+
+	.watchlist-remove {
+		grid-column: 2;
+		grid-row: 1 / span 2;
+	}
+
+	.watchlist-chart-heading {
+		align-items: start;
+		flex-direction: column;
+	}
+}
