@@ -1,0 +1,359 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import { SITE_TITLE } from '../consts';
+import '../styles/watchlist.css';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Watchlist | ${SITE_TITLE}`} description="Your saved stock tickers and recent prices." />
+	</head>
+	<body>
+		<Header />
+		<main class="watchlist-page">
+			<section aria-labelledby="watchlist-title">
+				<p class="eyebrow">Your saved stocks</p>
+				<h1 id="watchlist-title">Watchlist</h1>
+				<p class="watchlist-intro">Tickers saved in this browser, with their latest available closing prices.</p>
+				<p id="watchlist-status" class="watchlist-status" role="status" aria-live="polite">
+					Loading your watchlist…
+				</p>
+				<ul id="watchlist-items" class="watchlist-items" aria-label="Saved stocks"></ul>
+				<p id="watchlist-empty" class="watchlist-empty" hidden>
+					Your watchlist is empty. Search for a company on <a href="/about">About</a> and add it with the plus button.
+				</p>
+			</section>
+		</main>
+		<script>
+			import {
+				getWatchlist,
+				removeWatchlistEntry,
+				updateWatchlistPrice,
+				type WatchlistEntry,
+			} from '../lib/watchlist';
+			import {
+				fetchStockHistory,
+				renderStockChart,
+				STOCK_RANGE_LABELS,
+				type StockHistoryRange,
+			} from '../lib/stock-chart';
+
+			const list = document.querySelector<HTMLUListElement>('#watchlist-items');
+			const status = document.querySelector<HTMLElement>('#watchlist-status');
+			const empty = document.querySelector<HTMLElement>('#watchlist-empty');
+			let expandedRow: HTMLLIElement | undefined;
+			let chartRequest: AbortController | undefined;
+			const formatPrice = (price: number, currency = 'USD') => {
+				try {
+					return new Intl.NumberFormat(undefined, {
+						style: 'currency',
+						currency,
+						maximumFractionDigits: 2,
+					}).format(price);
+				} catch {
+					return `${currency} ${price.toFixed(2)}`;
+				}
+			};
+
+			const updateEmptyState = () => {
+				if (!list || !empty) return;
+				empty.hidden = list.childElementCount > 0;
+			};
+
+			const closeExpandedRow = () => {
+				if (!expandedRow) return;
+				expandedRow.querySelector<HTMLButtonElement>('.watchlist-open')
+					?.setAttribute('aria-expanded', 'false');
+				expandedRow.querySelector<HTMLElement>('.watchlist-chart-panel')?.setAttribute('hidden', '');
+				expandedRow = undefined;
+				chartRequest?.abort();
+				chartRequest = undefined;
+			};
+
+			const showCompanyHistory = async (
+				entry: WatchlistEntry,
+				row: HTMLLIElement,
+				range: StockHistoryRange,
+			) => {
+				const panel = row.querySelector<HTMLElement>('.watchlist-chart-panel');
+				const rangeTitle = row.querySelector<HTMLElement>('.watchlist-range-title');
+				const periodChange = row.querySelector<HTMLElement>('.period-change');
+				const chartStatus = row.querySelector<HTMLElement>('.watchlist-chart-status');
+				const stockChart = row.querySelector<SVGSVGElement>('.stock-chart');
+				const rangeButtons = Array.from(
+					row.querySelectorAll<HTMLButtonElement>('.watchlist-range-controls [data-range]'),
+				);
+				if (!panel || !rangeTitle || !periodChange || !chartStatus || !stockChart) {
+					return;
+				}
+
+				chartRequest?.abort();
+				const request = new AbortController();
+				chartRequest = request;
+				rangeButtons.forEach((button) =>
+					button.setAttribute('aria-pressed', String(button.dataset.range === range)),
+				);
+				rangeTitle.textContent = STOCK_RANGE_LABELS[range];
+				chartStatus.textContent = '';
+				periodChange.textContent = '';
+
+				try {
+					const history = await fetchStockHistory(entry.symbol, range, request.signal);
+					if (!row.isConnected || panel.hidden) return;
+					renderStockChart(stockChart, periodChange, history, range);
+					chartStatus.textContent = '';
+					const latestPrice = history.prices.at(-1);
+					if (latestPrice) {
+						updateWatchlistPrice(entry.symbol, latestPrice.close, history.currency, latestPrice.date);
+						const price = row.querySelector<HTMLElement>('.watchlist-price');
+						if (price) {
+							price.textContent = formatPrice(latestPrice.close, history.currency);
+							row.classList.remove('price-unavailable');
+						}
+					}
+				} catch (error) {
+					if (error instanceof DOMException && error.name === 'AbortError') return;
+					chartStatus.textContent =
+						error instanceof Error ? error.message : 'Price history could not be reached.';
+				} finally {
+					if (chartRequest === request) chartRequest = undefined;
+				}
+
+			};
+
+			const refreshPrice = async (entry: WatchlistEntry, row: HTMLLIElement) => {
+				const price = row.querySelector<HTMLElement>('.watchlist-price');
+				if (!price) return false;
+
+				try {
+					const response = await fetch(
+						`/Api/finance/chart/${encodeURIComponent(entry.symbol)}?range=5d`,
+					);
+					const payload: unknown = await response.json();
+					if (!response.ok) {
+						const message =
+							typeof payload === 'object' &&
+							payload !== null &&
+							'error' in payload &&
+							typeof payload.error === 'string'
+								? payload.error
+								: 'Recent price is temporarily unavailable.';
+						throw new Error(message);
+					}
+					if (
+						typeof payload !== 'object' ||
+						payload === null ||
+						!('prices' in payload) ||
+						!Array.isArray(payload.prices) ||
+						!('currency' in payload) ||
+						typeof payload.currency !== 'string'
+					) {
+						throw new Error('Unexpected response from price history.');
+					}
+					const latest = payload.prices.at(-1);
+					if (
+						typeof latest !== 'object' ||
+						latest === null ||
+						!('close' in latest) ||
+						typeof latest.close !== 'number' ||
+						!Number.isFinite(latest.close) ||
+						!('date' in latest) ||
+						typeof latest.date !== 'string'
+					) {
+						throw new Error('No recent price is available for this ticker.');
+					}
+
+					updateWatchlistPrice(entry.symbol, latest.close, payload.currency, latest.date);
+					if (row.isConnected) {
+						price.textContent = formatPrice(latest.close, payload.currency);
+						row.classList.remove('price-unavailable');
+					}
+					return true;
+				} catch (error) {
+					if (row.isConnected) {
+						price.textContent = error instanceof Error ? error.message : 'Recent price is temporarily unavailable.';
+						row.classList.add('price-unavailable');
+					}
+					return false;
+				}
+			};
+
+			if (list && status && empty) {
+				try {
+					const entries = getWatchlist();
+					if (entries.length === 0) {
+						status.hidden = true;
+						updateEmptyState();
+					} else {
+						status.textContent = 'Refreshing recent prices…';
+						for (const entry of entries) {
+							const row = document.createElement('li');
+							row.className = 'watchlist-item';
+							row.dataset.symbol = entry.symbol;
+
+							const identity = document.createElement('div');
+							identity.className = 'watchlist-identity';
+							const open = document.createElement('button');
+							open.className = 'watchlist-open';
+							open.type = 'button';
+							open.setAttribute('aria-expanded', 'false');
+							open.setAttribute('aria-label', `View ${entry.name} (${entry.symbol}) price chart`);
+							open.addEventListener('click', () => {
+								if (expandedRow === row) {
+									closeExpandedRow();
+									return;
+								}
+								closeExpandedRow();
+								expandedRow = row;
+								open.setAttribute('aria-expanded', 'true');
+								const chartPanel = row.querySelector<HTMLElement>('.watchlist-chart-panel');
+								chartPanel?.removeAttribute('hidden');
+								showCompanyHistory(entry, row, '1y');
+							});
+							const title = document.createElement('h2');
+							title.textContent = entry.name;
+							const symbol = document.createElement('p');
+							symbol.className = 'watchlist-symbol';
+							symbol.textContent = entry.symbol;
+							open.append(title, symbol);
+							identity.append(open);
+
+							const price = document.createElement('p');
+							price.className = 'watchlist-price';
+							price.textContent =
+								entry.price !== undefined
+									? formatPrice(entry.price, entry.currency)
+									: 'Loading recent price…';
+
+							const remove = document.createElement('button');
+							remove.className = 'watchlist-remove';
+							remove.type = 'button';
+							remove.textContent = '-';
+							remove.setAttribute('aria-label', `Remove ${entry.symbol} from watchlist`);
+							remove.title = 'Remove from watchlist';
+							remove.addEventListener('click', () => {
+								try {
+									if (expandedRow === row) closeExpandedRow();
+									removeWatchlistEntry(entry.symbol);
+									row.remove();
+									updateEmptyState();
+									status.hidden = false;
+									status.textContent = `${entry.symbol} removed from your watchlist.`;
+								} catch (error) {
+									status.hidden = false;
+									status.textContent =
+										error instanceof Error ? error.message : 'Unable to update your watchlist.';
+								}
+							});
+
+							const chartPanel = document.createElement('section');
+							chartPanel.className = 'watchlist-chart-panel';
+							chartPanel.id = `watchlist-chart-${list.childElementCount}`;
+							chartPanel.hidden = true;
+							chartPanel.setAttribute('aria-label', `${entry.name} price history`);
+							open.setAttribute('aria-controls', chartPanel.id);
+
+							const heading = document.createElement('div');
+							heading.className = 'watchlist-chart-heading';
+							const headingText = document.createElement('div');
+							const rangeTitle = document.createElement('p');
+							rangeTitle.className = 'eyebrow watchlist-range-title';
+							rangeTitle.textContent = STOCK_RANGE_LABELS['1y'];
+							const chartTitle = document.createElement('h3');
+							chartTitle.textContent = `${entry.name} (${entry.symbol})`;
+							headingText.append(rangeTitle, chartTitle);
+							const periodChange = document.createElement('p');
+							periodChange.className = 'period-change';
+							heading.append(headingText, periodChange);
+
+							const chartStatus = document.createElement('p');
+							chartStatus.className = 'watchlist-chart-status';
+							chartStatus.setAttribute('role', 'status');
+							chartStatus.setAttribute('aria-live', 'polite');
+							const stockChart = document.createElementNS(
+								'http://www.w3.org/2000/svg',
+								'svg',
+							);
+							stockChart.classList.add('stock-chart');
+							stockChart.setAttribute('viewBox', '0 0 760 340');
+							stockChart.setAttribute('role', 'img');
+							stockChart.setAttribute('aria-hidden', 'true');
+							const rangeControls = document.createElement('div');
+							rangeControls.className = 'range-controls watchlist-range-controls';
+							rangeControls.setAttribute('role', 'group');
+							rangeControls.setAttribute('aria-label', 'Stock chart time range');
+							rangeControls.addEventListener('click', (event) => {
+								if (!(event.target instanceof HTMLButtonElement)) return;
+								const range = event.target.dataset.range;
+								if (
+									!range ||
+									!Object.hasOwn(STOCK_RANGE_LABELS, range)
+								) {
+									return;
+								}
+								const selectedRange = range as StockHistoryRange;
+								for (const rangeButton of rangeControls.querySelectorAll<HTMLButtonElement>('[data-range]')) {
+									rangeButton.setAttribute('aria-pressed', String(rangeButton === event.target));
+								}
+								rangeTitle.textContent = STOCK_RANGE_LABELS[selectedRange];
+								showCompanyHistory(entry, row, selectedRange);
+							});
+							for (const [range, label] of [
+								['5d', 'Week'],
+								['1mo', 'Month'],
+								['1y', 'Year'],
+								['5y', '5 years'],
+								['max', 'Past performance'],
+							] as const) {
+								const button = document.createElement('button');
+								button.type = 'button';
+								button.dataset.range = range;
+								button.setAttribute('aria-pressed', String(range === '1y'));
+								button.textContent = label;
+								rangeControls.append(button);
+							}
+							const footnote = document.createElement('p');
+							footnote.className = 'watchlist-chart-footnote';
+							footnote.textContent = 'Historical share prices are not a guarantee of future performance.';
+							chartPanel.append(heading, chartStatus, stockChart, rangeControls, footnote);
+
+							row.append(identity, price, remove, chartPanel);
+							list.append(row);
+						}
+						updateEmptyState();
+
+						let refreshed = 0;
+						for (let index = 0; index < entries.length; index += 4) {
+							const batch = entries.slice(index, index + 4);
+							const rows = batch.map((entry) =>
+								list.querySelector<HTMLLIElement>(
+									`[data-symbol="${CSS.escape(entry.symbol)}"]`,
+								),
+							);
+							const results = await Promise.all(
+								batch.map((entry, batchIndex) => {
+									const row = rows[batchIndex];
+									return row ? refreshPrice(entry, row) : Promise.resolve(false);
+								}),
+							);
+							refreshed += results.filter(Boolean).length;
+						}
+
+						status.hidden = false;
+						status.textContent =
+							refreshed === entries.length
+								? 'Recent prices updated. Market data may be delayed.'
+								: 'Some recent prices could not be updated; any previously saved prices are still shown.';
+					}
+				} catch (error) {
+					status.hidden = false;
+					status.textContent =
+						error instanceof Error ? error.message : 'Unable to load your watchlist.';
+				}
+			}
+
+		</script>
+	</body>
+</html>
