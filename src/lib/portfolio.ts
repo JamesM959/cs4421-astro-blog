@@ -74,6 +74,7 @@ export function addPortfolioEntry(
 	entry: Omit<PortfolioEntry, 'allocation'>,
 	allocation?: number,
 	storage?: PortfolioStorage,
+	existingAllocations?: Record<string, number>,
 ): void {
 	if (
 		typeof entry.symbol !== 'string' ||
@@ -94,23 +95,51 @@ export function addPortfolioEntry(
 		target.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify([{ ...entry, symbol, allocation: 100 }]));
 		return;
 	}
-	if (allocation === undefined || !Number.isFinite(allocation) || allocation <= 0 || allocation >= 100) {
-		throw new Error('Choose a percentage greater than 0% and less than 100%.');
+	if (
+		allocation === undefined ||
+		!Number.isFinite(allocation) ||
+		allocation <= 0 ||
+		allocation >= 100 ||
+		!Number.isInteger(allocation)
+	) {
+		throw new Error('Choose a whole percentage from 1% to 99%.');
 	}
-
-	const remainingAllocation = 100 - allocation;
-	const existingTotal = entries.reduce((total, saved) => total + saved.allocation, 0);
-	let allocated = 0;
-	const rebalanced = entries.map((saved, index) => {
-		const currentAllocation =
-			index === entries.length - 1
-				? remainingAllocation - allocated
-				: (saved.allocation / existingTotal) * remainingAllocation;
-		allocated += currentAllocation;
-		return { ...saved, allocation: currentAllocation };
+	if (!existingAllocations) {
+		throw new Error('Set an allocation for every existing holding.');
+	}
+	const normalizedAllocations = new Map<string, number>();
+	for (const [savedSymbol, savedAllocation] of Object.entries(existingAllocations)) {
+		const normalizedSymbol = savedSymbol.toUpperCase();
+		if (
+			normalizedAllocations.has(normalizedSymbol) ||
+			!Number.isFinite(savedAllocation) ||
+			savedAllocation <= 0 ||
+			savedAllocation > 100 ||
+			!Number.isInteger(savedAllocation * 2)
+		) {
+			throw new Error('Enter a percentage in 0.5% increments for every existing holding.');
+		}
+		normalizedAllocations.set(normalizedSymbol, savedAllocation);
+	}
+	if (
+		normalizedAllocations.size !== entries.length ||
+		entries.some((saved) => !normalizedAllocations.has(saved.symbol.toUpperCase()))
+	) {
+		throw new Error('Set an allocation for every existing holding.');
+	}
+	const total = allocation + [...normalizedAllocations.values()].reduce((sum, value) => sum + value, 0);
+	if (Math.abs(total - 100) > 0.01) {
+		throw new Error('The allocations must total 100%.');
+	}
+	const updatedEntries = entries.map((saved) => {
+		const savedAllocation = normalizedAllocations.get(saved.symbol.toUpperCase());
+		if (savedAllocation === undefined) {
+			throw new Error('Set an allocation for every existing holding.');
+		}
+		return { ...saved, allocation: savedAllocation };
 	});
-	rebalanced.push({ ...entry, symbol, allocation });
-	target.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(rebalanced));
+	updatedEntries.push({ ...entry, symbol, allocation });
+	target.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(updatedEntries));
 }
 
 export function removePortfolioEntry(symbol: string, storage?: PortfolioStorage): void {

@@ -58,11 +58,16 @@ import Layout from '../layouts/BlogPost.astro';
 		<form id="portfolio-allocation-form">
 			<h2 id="portfolio-allocation-title">Set portfolio allocation</h2>
 			<p id="portfolio-allocation-help"></p>
-			<label for="portfolio-allocation-input">Allocation percentage</label>
+			<p id="new-stock-allocation-label" class="new-stock-allocation-label">New stock allocation</p>
 			<div class="allocation-controls">
-				<input id="portfolio-allocation-input" type="number" min="0.01" max="99.99" step="0.01" required />
-				<span aria-hidden="true">%</span>
+				<div class="allocation-stepper">
+					<button type="button" data-allocation-step="-1" data-allocation-target="new" aria-label="Decrease new stock allocation">-</button>
+					<output id="new-stock-allocation" aria-live="polite">10%</output>
+					<button type="button" data-allocation-step="1" data-allocation-target="new" aria-label="Increase new stock allocation">+</button>
+				</div>
 			</div>
+			<p id="allocation-total" class="allocation-total" aria-live="polite"></p>
+			<div id="existing-allocation-inputs" class="existing-allocation-inputs"></div>
 			<div class="allocation-actions">
 				<button type="submit">Add holding</button>
 				<button id="portfolio-allocation-cancel" type="button">Cancel</button>
@@ -119,8 +124,11 @@ import Layout from '../layouts/BlogPost.astro';
 	const portfolioActionStatus = document.querySelector<HTMLElement>('#portfolio-action-status');
 	const allocationDialog = document.querySelector<HTMLDialogElement>('#portfolio-allocation-dialog');
 	const allocationForm = document.querySelector<HTMLFormElement>('#portfolio-allocation-form');
-	const allocationInput = document.querySelector<HTMLInputElement>('#portfolio-allocation-input');
+	const newStockAllocationLabel = document.querySelector<HTMLElement>('#new-stock-allocation-label');
+	const newStockAllocationDisplay = document.querySelector<HTMLOutputElement>('#new-stock-allocation');
 	const allocationHelp = document.querySelector<HTMLElement>('#portfolio-allocation-help');
+	const existingAllocationInputs = document.querySelector<HTMLElement>('#existing-allocation-inputs');
+	const allocationTotal = document.querySelector<HTMLElement>('#allocation-total');
 	const allocationCancel = document.querySelector<HTMLButtonElement>('#portfolio-allocation-cancel');
 	const rangeTitle = document.querySelector<HTMLElement>('#range-title');
 	const periodChange = document.querySelector<HTMLElement>('#period-change');
@@ -130,6 +138,8 @@ import Layout from '../layouts/BlogPost.astro';
 	let chartRequest: AbortController | undefined;
 	let selectedCompany: CompanyResult | undefined;
 	let latestHistory: StockHistory | undefined;
+	let newStockAllocation = 10;
+	let activeExistingAllocation: HTMLInputElement | undefined;
 
 	const updatePortfolioButton = (company: CompanyResult) => {
 		if (!portfolioButton) return;
@@ -145,7 +155,10 @@ import Layout from '../layouts/BlogPost.astro';
 				: 'Price unavailable';
 	};
 
-	const savePortfolioHolding = (allocation?: number) => {
+	const savePortfolioHolding = (
+		allocation?: number,
+		existingAllocations?: Record<string, number>,
+	) => {
 		if (!selectedCompany || !portfolioActionStatus) return;
 		const latestPrice = latestHistory?.prices.at(-1);
 		if (!latestPrice || !latestHistory) {
@@ -158,11 +171,77 @@ import Layout from '../layouts/BlogPost.astro';
 			price: latestPrice.close,
 			currency: latestHistory.currency,
 			priceDate: latestPrice.date,
-		}, allocation);
+		}, allocation, undefined, existingAllocations);
 		portfolioActionStatus.hidden = false;
 		portfolioActionStatus.textContent = `${selectedCompany.symbol} added to your portfolio.`;
 		updatePortfolioButton(selectedCompany);
 	};
+
+	const updateAllocationTotal = () => {
+		if (!existingAllocationInputs || !allocationTotal) return;
+		const total = newStockAllocation + Array.from(
+			existingAllocationInputs.querySelectorAll<HTMLInputElement>('input[data-symbol]'),
+		).reduce((sum, input) => sum + Number(input.value || 0), 0);
+		const isValid = Math.abs(total - 100) <= 0.01;
+		allocationTotal.textContent = `Total: ${total.toFixed(2)}%${isValid ? '' : ' — must equal 100%'}`;
+		allocationTotal.classList.toggle('is-valid', isValid);
+	};
+	const normalizeExistingAllocation = (input: HTMLInputElement) => {
+		const value = Number(input.value);
+		if (input.value === '' || !Number.isFinite(value) || Number.isInteger(value)) return;
+		const minimum = Number(input.min);
+		const maximum = Number(input.max);
+		input.value = String(Math.min(maximum, Math.max(minimum, Math.floor(value) + 0.5)));
+	};
+	existingAllocationInputs?.addEventListener('input', (event) => {
+		const target = event.target;
+		if (target instanceof HTMLInputElement && target.dataset.symbol) updateAllocationTotal();
+	});
+	const normalizeActiveExistingAllocation = () => {
+		if (!activeExistingAllocation) return;
+		normalizeExistingAllocation(activeExistingAllocation);
+		activeExistingAllocation = undefined;
+		updateAllocationTotal();
+	};
+	document.addEventListener('focusin', (event) => {
+		const target = event.target;
+		if (target instanceof HTMLInputElement && target.dataset.symbol) {
+			if (activeExistingAllocation !== target) normalizeActiveExistingAllocation();
+			activeExistingAllocation = target;
+		} else {
+			normalizeActiveExistingAllocation();
+		}
+	});
+	document.addEventListener('pointerdown', (event) => {
+		const target = document.activeElement;
+		if (
+			target instanceof HTMLInputElement &&
+			target.dataset.symbol &&
+			event.target !== target
+		) {
+			normalizeExistingAllocation(target);
+			activeExistingAllocation = undefined;
+			updateAllocationTotal();
+		}
+	});
+	allocationForm?.addEventListener('click', (event) => {
+		const target = event.target;
+		if (!(target instanceof HTMLButtonElement) || !target.dataset.allocationStep) return;
+		const controls = target.closest('.allocation-controls');
+		if (target.dataset.allocationTarget === 'new') {
+			newStockAllocation = Math.min(99, Math.max(1, newStockAllocation + Number(target.dataset.allocationStep)));
+			if (newStockAllocationDisplay) newStockAllocationDisplay.value = `${newStockAllocation}%`;
+			updateAllocationTotal();
+			return;
+		}
+		const input = controls?.querySelector<HTMLInputElement>('input[type="number"]');
+		if (!input) return;
+		const nextValue = Number(input.value) + Number(target.dataset.allocationStep);
+		const min = Number(input.min);
+		const max = Number(input.max);
+		input.value = Math.min(max, Math.max(min, nextValue)).toFixed(0);
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+	});
 
 	portfolioButton?.addEventListener('click', () => {
 		if (!selectedCompany || !portfolioActionStatus) return;
@@ -172,14 +251,69 @@ import Layout from '../layouts/BlogPost.astro';
 				savePortfolioHolding();
 				return;
 			}
-			if (!allocationDialog || !allocationInput || !allocationHelp) {
+			if (
+				!allocationDialog ||
+				!newStockAllocationLabel ||
+				!newStockAllocationDisplay ||
+				!allocationHelp ||
+				!existingAllocationInputs ||
+				!allocationTotal
+			) {
 				throw new Error('The portfolio allocation form is unavailable.');
 			}
-			allocationInput.value = '10';
+			newStockAllocation = 10;
+			newStockAllocationDisplay.value = '10%';
+			newStockAllocationLabel.textContent = `New stock allocation (${selectedCompany.symbol})`;
+			const newStockButtons = allocationDialog.querySelectorAll<HTMLButtonElement>('[data-allocation-target="new"]');
+			newStockButtons[0]?.setAttribute('aria-label', `Decrease ${selectedCompany.symbol} allocation`);
+			newStockButtons[1]?.setAttribute('aria-label', `Increase ${selectedCompany.symbol} allocation`);
 			allocationHelp.textContent =
-				'Choose this stock’s percentage. Existing holdings will be proportionally adjusted so the portfolio totals 100%.';
+				'Set the new stock’s allocation. The total must equal 100%.';
+			existingAllocationInputs.replaceChildren();
+			for (const entry of entries) {
+				const label = document.createElement('label');
+				label.htmlFor = `existing-allocation-${entry.symbol}`;
+				label.textContent = `${entry.name} (${entry.symbol})`;
+				const controls = document.createElement('div');
+				controls.className = 'allocation-controls';
+				const input = document.createElement('input');
+				input.id = label.htmlFor;
+				input.type = 'number';
+				input.min = '0.5';
+				input.max = '100';
+				input.step = 'any';
+				input.required = true;
+				input.value = entry.allocation.toFixed(2);
+				input.dataset.symbol = entry.symbol;
+				input.addEventListener('keydown', (event) => {
+					if (event.key === 'Tab') {
+						normalizeExistingAllocation(input);
+						activeExistingAllocation = undefined;
+						updateAllocationTotal();
+					}
+				});
+				const stepper = document.createElement('div');
+				stepper.className = 'allocation-stepper';
+				const decrease = document.createElement('button');
+				decrease.type = 'button';
+				decrease.dataset.allocationStep = '-1';
+				decrease.setAttribute('aria-label', `Decrease ${entry.symbol} allocation`);
+				decrease.textContent = '-';
+				const percentage = document.createElement('span');
+				percentage.setAttribute('aria-hidden', 'true');
+				percentage.textContent = '%';
+				const increase = document.createElement('button');
+				increase.type = 'button';
+				increase.dataset.allocationStep = '1';
+				increase.setAttribute('aria-label', `Increase ${entry.symbol} allocation`);
+				increase.textContent = '+';
+				stepper.append(decrease, percentage, increase);
+				controls.append(input, stepper);
+				existingAllocationInputs.append(label, controls);
+			}
+			updateAllocationTotal();
 			allocationDialog.showModal();
-			allocationInput.focus();
+			newStockButtons[0]?.focus();
 		} catch (error) {
 			portfolioActionStatus.hidden = false;
 			portfolioActionStatus.textContent =
@@ -189,15 +323,37 @@ import Layout from '../layouts/BlogPost.astro';
 
 	allocationForm?.addEventListener('submit', (event) => {
 		event.preventDefault();
-		if (!allocationInput || !portfolioActionStatus) return;
-		const allocation = Number(allocationInput.value);
-		if (!Number.isFinite(allocation) || allocation <= 0 || allocation >= 100) {
+		if (!existingAllocationInputs || !allocationTotal || !portfolioActionStatus) return;
+		const allocationInputs = Array.from(
+			existingAllocationInputs.querySelectorAll<HTMLInputElement>('input[data-symbol]'),
+		);
+		for (const input of allocationInputs) normalizeExistingAllocation(input);
+		activeExistingAllocation = undefined;
+		updateAllocationTotal();
+		const allocation = newStockAllocation;
+		if (
+			!Number.isFinite(allocation) ||
+			allocation <= 0 ||
+			allocation >= 100 ||
+			!Number.isInteger(allocation)
+		) {
 			portfolioActionStatus.hidden = false;
-			portfolioActionStatus.textContent = 'Choose a percentage greater than 0% and less than 100%.';
+			portfolioActionStatus.textContent = 'Choose a whole percentage from 1% to 99%.';
 			return;
 		}
 		try {
-			savePortfolioHolding(allocation);
+			const existingAllocations = Object.fromEntries(
+				allocationInputs.flatMap((input) =>
+					input.dataset.symbol ? [[input.dataset.symbol, Number(input.value)]] : [],
+				),
+			);
+			const total = allocation + Object.values(existingAllocations).reduce((sum, value) => sum + value, 0);
+			if (Math.abs(total - 100) > 0.01) {
+				allocationTotal.textContent = `Total: ${total.toFixed(2)}% — must equal 100%`;
+				allocationTotal.classList.remove('is-valid');
+				return;
+			}
+			savePortfolioHolding(allocation, existingAllocations);
 			allocationDialog?.close();
 		} catch (error) {
 			portfolioActionStatus.hidden = false;
@@ -655,6 +811,8 @@ import Layout from '../layouts/BlogPost.astro';
 	}
 	.allocation-dialog {
 		width: min(100% - 2rem, 28rem);
+		max-height: calc(100% - 2rem);
+		overflow-y: auto;
 		border: 1px solid #cbd3cd;
 		border-radius: 6px;
 		padding: 1.5rem;
@@ -679,18 +837,71 @@ import Layout from '../layouts/BlogPost.astro';
 		font-size: 0.85rem;
 		font-weight: 700;
 	}
-	.allocation-controls {
+	:global(.allocation-controls) {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 	}
-	.allocation-controls input {
+	:global(.allocation-controls input) {
 		width: 100%;
 		min-height: 42px;
 		border: 1px solid #cbd3cd;
 		border-radius: 3px;
 		padding: 0.5rem;
 		font: inherit;
+	}
+	:global(.allocation-controls input::-webkit-inner-spin-button),
+	:global(.allocation-controls input::-webkit-outer-spin-button) {
+		-webkit-appearance: none;
+		appearance: none;
+		margin: 0;
+	}
+	:global(.allocation-controls input) {
+		appearance: textfield;
+	}
+	:global(.allocation-stepper) {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	:global(.allocation-stepper button) {
+		width: 32px;
+		height: 32px;
+		border: 1px solid #174e40;
+		border-radius: 3px;
+		background: #fff;
+		color: #174e40;
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	:global(.allocation-stepper output) {
+		min-width: 3.5rem;
+		text-align: center;
+		font-weight: 700;
+	}
+	:global(.allocation-stepper button:hover) {
+		background: #174e40;
+		color: #fff;
+	}
+	:global(.allocation-stepper button:focus-visible) {
+		outline: 3px solid #95c7ae;
+		outline-offset: 2px;
+	}
+	.existing-allocation-inputs {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+	:global(.existing-allocation-inputs label) {
+		margin: 0;
+	}
+	.allocation-total {
+		margin-bottom: 0;
+		font-weight: 700;
+	}
+	.allocation-total.is-valid {
+		color: #26735e;
 	}
 	.allocation-actions {
 		display: flex;
