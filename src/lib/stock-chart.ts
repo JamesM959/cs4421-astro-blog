@@ -27,7 +27,7 @@ export async function fetchStockHistory(
 	signal?: AbortSignal,
 ): Promise<StockHistory> {
 	const response = await fetch(
-		`/Api/finance/chart/${encodeURIComponent(symbol)}?range=${range}`,
+		`/api/finance/chart/${encodeURIComponent(symbol)}?range=${range}`,
 		{ signal },
 	);
 	const payload: unknown = await response.json();
@@ -75,6 +75,36 @@ export async function fetchStockHistory(
 	}
 
 	return payload as StockHistory;
+}
+
+export function renderStockSparkline(stockChart: SVGSVGElement, history: StockHistory): void {
+	const width = 120;
+	const height = 44;
+	const padding = 2;
+	const values = history.prices.map((point) => point.close);
+	const minValue = Math.min(...values);
+	const maxValue = Math.max(...values);
+	const valueRange = maxValue - minValue || 1;
+	const points = values.map((value, index) => ({
+		x: padding + (index / Math.max(values.length - 1, 1)) * (width - padding * 2),
+		y: padding + (1 - (value - minValue) / valueRange) * (height - padding * 2),
+	}));
+	const pathData = points
+		.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+		.join(' ');
+	const change = values[values.length - 1] - values[0];
+	const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+	line.setAttribute('d', pathData);
+	line.setAttribute('fill', 'none');
+	line.setAttribute('stroke', change >= 0 ? '#26735e' : '#a34242');
+	line.setAttribute('stroke-width', '2');
+	line.setAttribute('stroke-linecap', 'round');
+	line.setAttribute('stroke-linejoin', 'round');
+	stockChart.replaceChildren(line);
+	stockChart.setAttribute(
+		'aria-label',
+		`${history.name} (${history.symbol}) share price trend over the past month`,
+	);
 }
 
 export function renderStockChart(

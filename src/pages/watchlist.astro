@@ -1,7 +1,7 @@
 ---
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
-import { SITE_TITLE } from '../consts';
+import { SITE_TITLE } from '../styles/consts';
 import '../finance/watchlist.css';
 ---
 
@@ -129,7 +129,7 @@ import '../finance/watchlist.css';
 
 				try {
 					const response = await fetch(
-						`/Api/finance/chart/${encodeURIComponent(entry.symbol)}?range=5d`,
+						`/api/finance/chart/${encodeURIComponent(entry.symbol)}?range=5d`,
 					);
 					const payload: unknown = await response.json();
 					if (!response.ok) {

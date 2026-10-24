@@ -27,6 +27,7 @@ import Layout from '../layouts/BlogPost.astro';
 					<p id="range-title" class="eyebrow">Past year</p>
 					<div class="performance-title-row">
 						<h3 id="performance-title"></h3>
+						<button id="portfolio-add" class="portfolio-add" type="button">Add to portfolio</button>
 						<button
 							id="watchlist-toggle"
 							class="watchlist-toggle"
@@ -39,6 +40,7 @@ import Layout from '../layouts/BlogPost.astro';
 				</div>
 				<p id="period-change" class="period-change"></p>
 			</div>
+			<p id="portfolio-action-status" class="search-status" role="status" aria-live="polite" hidden></p>
 			<p id="watchlist-action-status" class="search-status" role="status" aria-live="polite" hidden></p>
 			<p id="chart-status" class="search-status" role="status" aria-live="polite"></p>
 			<svg id="stock-chart" class="stock-chart" viewBox="0 0 760 340" role="img" aria-hidden="true"></svg>
@@ -52,6 +54,21 @@ import Layout from '../layouts/BlogPost.astro';
 			<p class="chart-footnote">Historical share prices are not a guarantee of future performance.</p>
 		</section>
 	</section>
+	<dialog id="portfolio-allocation-dialog" class="allocation-dialog" aria-labelledby="portfolio-allocation-title">
+		<form id="portfolio-allocation-form">
+			<h2 id="portfolio-allocation-title">Set portfolio allocation</h2>
+			<p id="portfolio-allocation-help"></p>
+			<label for="portfolio-allocation-input">Allocation percentage</label>
+			<div class="allocation-controls">
+				<input id="portfolio-allocation-input" type="number" min="0.01" max="99.99" step="0.01" required />
+				<span aria-hidden="true">%</span>
+			</div>
+			<div class="allocation-actions">
+				<button type="submit">Add holding</button>
+				<button id="portfolio-allocation-cancel" type="button">Cancel</button>
+			</div>
+		</form>
+	</dialog>
 </Layout>
 
 <style>
@@ -68,6 +85,11 @@ import Layout from '../layouts/BlogPost.astro';
 		updateWatchlistPrice,
 		WATCHLIST_STORAGE_KEY,
 	} from '../lib/watchlist';
+	import {
+		addPortfolioEntry,
+		getPortfolio,
+		PORTFOLIO_STORAGE_KEY,
+	} from '../lib/portfolio';
 	import {
 		fetchStockHistory,
 		renderStockChart,
@@ -93,6 +115,13 @@ import Layout from '../layouts/BlogPost.astro';
 	const performanceTitle = document.querySelector<HTMLElement>('#performance-title');
 	const watchlistButton = document.querySelector<HTMLButtonElement>('#watchlist-toggle');
 	const watchlistActionStatus = document.querySelector<HTMLElement>('#watchlist-action-status');
+	const portfolioButton = document.querySelector<HTMLButtonElement>('#portfolio-add');
+	const portfolioActionStatus = document.querySelector<HTMLElement>('#portfolio-action-status');
+	const allocationDialog = document.querySelector<HTMLDialogElement>('#portfolio-allocation-dialog');
+	const allocationForm = document.querySelector<HTMLFormElement>('#portfolio-allocation-form');
+	const allocationInput = document.querySelector<HTMLInputElement>('#portfolio-allocation-input');
+	const allocationHelp = document.querySelector<HTMLElement>('#portfolio-allocation-help');
+	const allocationCancel = document.querySelector<HTMLButtonElement>('#portfolio-allocation-cancel');
 	const rangeTitle = document.querySelector<HTMLElement>('#range-title');
 	const periodChange = document.querySelector<HTMLElement>('#period-change');
 	const chartStatus = document.querySelector<HTMLElement>('#chart-status');
@@ -101,6 +130,82 @@ import Layout from '../layouts/BlogPost.astro';
 	let chartRequest: AbortController | undefined;
 	let selectedCompany: CompanyResult | undefined;
 	let latestHistory: StockHistory | undefined;
+
+	const updatePortfolioButton = (company: CompanyResult) => {
+		if (!portfolioButton) return;
+		const hasPrice = latestHistory?.prices.at(-1) !== undefined;
+		const inPortfolio = getPortfolio().some(
+			(entry) => entry.symbol.toUpperCase() === company.symbol.toUpperCase(),
+		);
+		portfolioButton.disabled = inPortfolio || !hasPrice;
+		portfolioButton.textContent = inPortfolio
+			? 'In portfolio'
+			: hasPrice
+				? 'Add to portfolio'
+				: 'Price unavailable';
+	};
+
+	const savePortfolioHolding = (allocation?: number) => {
+		if (!selectedCompany || !portfolioActionStatus) return;
+		const latestPrice = latestHistory?.prices.at(-1);
+		if (!latestPrice || !latestHistory) {
+			throw new Error('A stock price is not available yet. Try again when price history has loaded.');
+		}
+		addPortfolioEntry({
+			symbol: selectedCompany.symbol,
+			name: selectedCompany.name,
+			exchange: selectedCompany.exchange,
+			price: latestPrice.close,
+			currency: latestHistory.currency,
+			priceDate: latestPrice.date,
+		}, allocation);
+		portfolioActionStatus.hidden = false;
+		portfolioActionStatus.textContent = `${selectedCompany.symbol} added to your portfolio.`;
+		updatePortfolioButton(selectedCompany);
+	};
+
+	portfolioButton?.addEventListener('click', () => {
+		if (!selectedCompany || !portfolioActionStatus) return;
+		try {
+			const entries = getPortfolio();
+			if (entries.length === 0) {
+				savePortfolioHolding();
+				return;
+			}
+			if (!allocationDialog || !allocationInput || !allocationHelp) {
+				throw new Error('The portfolio allocation form is unavailable.');
+			}
+			allocationInput.value = '10';
+			allocationHelp.textContent =
+				'Choose this stock’s percentage. Existing holdings will be proportionally adjusted so the portfolio totals 100%.';
+			allocationDialog.showModal();
+			allocationInput.focus();
+		} catch (error) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent =
+				error instanceof Error ? error.message : 'Unable to update your portfolio.';
+		}
+	});
+
+	allocationForm?.addEventListener('submit', (event) => {
+		event.preventDefault();
+		if (!allocationInput || !portfolioActionStatus) return;
+		const allocation = Number(allocationInput.value);
+		if (!Number.isFinite(allocation) || allocation <= 0 || allocation >= 100) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent = 'Choose a percentage greater than 0% and less than 100%.';
+			return;
+		}
+		try {
+			savePortfolioHolding(allocation);
+			allocationDialog?.close();
+		} catch (error) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent =
+				error instanceof Error ? error.message : 'Unable to update your portfolio.';
+		}
+	});
+	allocationCancel?.addEventListener('click', () => allocationDialog?.close());
 
 	const updateWatchlistButton = (company: CompanyResult) => {
 		if (!watchlistButton) return;
@@ -150,11 +255,16 @@ import Layout from '../layouts/BlogPost.astro';
 	});
 
 	window.addEventListener('storage', (event) => {
-		if (event.key !== WATCHLIST_STORAGE_KEY || !selectedCompany) return;
+		if (!selectedCompany) return;
 		try {
-			updateWatchlistButton(selectedCompany);
+			if (event.key === WATCHLIST_STORAGE_KEY) updateWatchlistButton(selectedCompany);
+			if (event.key === PORTFOLIO_STORAGE_KEY) updatePortfolioButton(selectedCompany);
 		} catch (error) {
-			if (watchlistActionStatus) {
+			if (event.key === PORTFOLIO_STORAGE_KEY && portfolioActionStatus) {
+				portfolioActionStatus.hidden = false;
+				portfolioActionStatus.textContent =
+					error instanceof Error ? error.message : 'Unable to read your portfolio.';
+			} else if (watchlistActionStatus) {
 				watchlistActionStatus.hidden = false;
 				watchlistActionStatus.textContent =
 					error instanceof Error ? error.message : 'Unable to read your watchlist.';
@@ -172,6 +282,7 @@ import Layout from '../layouts/BlogPost.astro';
 		if (selectedCompany?.symbol.toUpperCase() === company.symbol.toUpperCase()) {
 			try {
 				updateWatchlistButton(company);
+				updatePortfolioButton(company);
 			} catch (error) {
 				if (watchlistActionStatus) {
 					watchlistActionStatus.hidden = false;
@@ -189,6 +300,15 @@ import Layout from '../layouts/BlogPost.astro';
 			renderStockChart(stockChart, periodChange, history, range);
 			if (selectedCompany?.symbol.toUpperCase() === company.symbol.toUpperCase()) {
 				latestHistory = history;
+				try {
+					updatePortfolioButton(company);
+				} catch (error) {
+					if (portfolioActionStatus) {
+						portfolioActionStatus.hidden = false;
+						portfolioActionStatus.textContent =
+							error instanceof Error ? error.message : 'Unable to read your portfolio.';
+					}
+				}
 				const latestPrice = history.prices.at(-1);
 				if (latestPrice) {
 					try {
@@ -240,7 +360,7 @@ import Layout from '../layouts/BlogPost.astro';
 		submitButton.disabled = true;
 
 		try {
-			const response = await fetch(`/Api/finance/search?q=${encodeURIComponent(query)}`);
+			const response = await fetch(`/api/finance/search?q=${encodeURIComponent(query)}`);
 			const payload: unknown = await response.json();
 			if (!response.ok) {
 				const message = typeof payload === 'object' && payload !== null && 'error' in payload
@@ -290,6 +410,19 @@ import Layout from '../layouts/BlogPost.astro';
 						watchlistActionStatus.hidden = true;
 						watchlistActionStatus.textContent = '';
 					}
+					if (portfolioActionStatus) {
+						portfolioActionStatus.hidden = true;
+						portfolioActionStatus.textContent = '';
+					}
+					try {
+						updatePortfolioButton(company);
+					} catch (error) {
+						if (portfolioActionStatus) {
+							portfolioActionStatus.hidden = false;
+							portfolioActionStatus.textContent =
+								error instanceof Error ? error.message : 'Unable to read your portfolio.';
+						}
+					}
 					for (const rangeButton of rangeButtons) {
 						rangeButton.setAttribute('aria-pressed', String(rangeButton.dataset.range === '1y'));
 					}
@@ -310,6 +443,15 @@ import Layout from '../layouts/BlogPost.astro';
 	});
 
 	selectedCompany = { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ' };
+	try {
+		updatePortfolioButton(selectedCompany);
+	} catch (error) {
+		if (portfolioActionStatus) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent =
+				error instanceof Error ? error.message : 'Unable to read your portfolio.';
+		}
+	}
 	showCompanyHistory(selectedCompany, '1y');
 </script>
 
@@ -487,6 +629,78 @@ import Layout from '../layouts/BlogPost.astro';
 	.watchlist-toggle:focus-visible {
 		outline: 3px solid #95c7ae;
 		outline-offset: 2px;
+	}
+	.portfolio-add,
+	.allocation-actions button {
+		min-height: 40px;
+		border: 1px solid #174e40;
+		border-radius: 3px;
+		background: #174e40;
+		padding: 0.45rem 0.75rem;
+		color: #fff;
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.portfolio-add:disabled {
+		background: #68736e;
+		border-color: #68736e;
+		cursor: default;
+	}
+	.portfolio-add:focus-visible,
+	.allocation-actions button:focus-visible {
+		outline: 3px solid #95c7ae;
+		outline-offset: 2px;
+	}
+	.allocation-dialog {
+		width: min(100% - 2rem, 28rem);
+		border: 1px solid #cbd3cd;
+		border-radius: 6px;
+		padding: 1.5rem;
+		color: inherit;
+	}
+	.allocation-dialog::backdrop {
+		background: rgb(0 0 0 / 45%);
+	}
+	.allocation-dialog h2 {
+		margin: 0;
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 1.4rem;
+		font-weight: 400;
+	}
+	.allocation-dialog p {
+		color: #68736e;
+		font-size: 0.9rem;
+	}
+	.allocation-dialog label {
+		display: block;
+		margin-bottom: 0.35rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+	.allocation-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.allocation-controls input {
+		width: 100%;
+		min-height: 42px;
+		border: 1px solid #cbd3cd;
+		border-radius: 3px;
+		padding: 0.5rem;
+		font: inherit;
+	}
+	.allocation-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		margin-top: 1.25rem;
+	}
+	.allocation-actions button:last-child {
+		background: #fff;
+		color: #174e40;
 	}
 	.period-change {
 		margin: 0;
