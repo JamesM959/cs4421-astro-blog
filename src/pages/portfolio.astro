@@ -1,0 +1,342 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import { SITE_TITLE } from '../styles/consts';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead
+			title={`Portfolio | ${SITE_TITLE}`}
+			description="View your portfolio holdings and their allocation percentages."
+		/>
+	</head>
+	<body>
+		<Header />
+		<main class="portfolio-page">
+			<section aria-labelledby="portfolio-title">
+				<h1 id="portfolio-title">Portfolio</h1>
+				<p class="portfolio-intro">Manage your stocks and their share of your portfolio.</p>
+				<p id="portfolio-status" class="portfolio-status" role="status" aria-live="polite" hidden></p>
+				<p id="portfolio-total" class="portfolio-total" hidden></p>
+				<ul id="portfolio-composition" class="portfolio-composition" aria-label="Portfolio composition" hidden></ul>
+				<ul id="portfolio-items" class="portfolio-items" aria-label="Portfolio holdings"></ul>
+				<p id="portfolio-empty" class="portfolio-empty" hidden>
+					Your portfolio is empty. <a href="/about">Research a stock</a> and add it to get started.
+				</p>
+			</section>
+		</main>
+	</body>
+</html>
+
+<script>
+	import {
+		getPortfolio,
+		PORTFOLIO_STORAGE_KEY,
+		removePortfolioEntry,
+	} from '../lib/portfolio';
+	import { fetchStockHistory, renderStockSparkline } from '../lib/stock-chart';
+
+	const status = document.querySelector<HTMLElement>('#portfolio-status');
+	const total = document.querySelector<HTMLElement>('#portfolio-total');
+	const composition = document.querySelector<HTMLUListElement>('#portfolio-composition');
+	const list = document.querySelector<HTMLUListElement>('#portfolio-items');
+	const empty = document.querySelector<HTMLElement>('#portfolio-empty');
+	const compositionColors = ['#174e40', '#28536b', '#55436b', '#26735e', '#3e526b', '#654b3c'];
+	const historyRequests = new Map<string, ReturnType<typeof fetchStockHistory>>();
+
+	const renderPortfolio = () => {
+		if (!status || !total || !composition || !list || !empty) return;
+		try {
+			const entries = getPortfolio();
+			list.replaceChildren();
+			composition.replaceChildren();
+			status.hidden = true;
+			empty.hidden = entries.length > 0;
+			total.hidden = entries.length === 0;
+			composition.hidden = entries.length === 0;
+			total.textContent = `Invested: ${entries.reduce((sum, entry) => sum + entry.allocation, 0).toFixed(2)}%`;
+
+			[...entries]
+				.sort((first, second) => second.allocation - first.allocation)
+				.forEach((entry, index) => {
+					const segment = document.createElement('li');
+					segment.className = 'portfolio-composition-segment';
+					segment.style.flexBasis = `${entry.allocation}%`;
+					segment.style.backgroundColor = compositionColors[index % compositionColors.length];
+					segment.title = `${entry.name} (${entry.symbol}): ${entry.allocation.toFixed(2)}%`;
+					segment.setAttribute('aria-label', `${entry.name} (${entry.symbol}), ${entry.allocation.toFixed(2)}%`);
+					const symbol = document.createElement('span');
+					symbol.textContent = entry.symbol;
+					const allocation = document.createElement('span');
+					allocation.textContent = `${entry.allocation.toFixed(1)}%`;
+					segment.append(symbol, allocation);
+					composition.append(segment);
+				});
+
+			for (const entry of entries) {
+				const item = document.createElement('li');
+				item.className = 'portfolio-item';
+				const identity = document.createElement('div');
+				identity.className = 'portfolio-identity';
+				const name = document.createElement('h2');
+				name.textContent = entry.name;
+				const heading = document.createElement('div');
+				heading.className = 'portfolio-identity-heading';
+				const symbol = document.createElement('span');
+				symbol.className = 'portfolio-symbol';
+				symbol.textContent = entry.symbol;
+				heading.append(name, symbol);
+				const addedPrice = document.createElement('p');
+				addedPrice.className = 'portfolio-added-price';
+				addedPrice.textContent =
+					entry.price === undefined
+						? 'Price unavailable'
+						: `${new Intl.NumberFormat(undefined, {
+								style: 'currency',
+								currency: entry.currency ?? 'USD',
+								maximumFractionDigits: 2,
+							}).format(entry.price)}${
+								entry.priceDate
+									? ` (${new Date(entry.priceDate).toLocaleDateString(undefined, {
+											month: 'short',
+											day: 'numeric',
+										})})`
+									: ''
+							}`;
+				identity.append(heading, addedPrice);
+
+				const sparkline = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+				sparkline.classList.add('portfolio-sparkline');
+				sparkline.setAttribute('viewBox', '0 0 120 44');
+				sparkline.setAttribute('role', 'img');
+				sparkline.setAttribute('aria-label', `${entry.name} (${entry.symbol}) price history loading`);
+				const sparklineStatus = document.createElement('span');
+				sparklineStatus.className = 'portfolio-sparkline-status';
+				sparklineStatus.setAttribute('role', 'status');
+				sparklineStatus.textContent = 'Loading chart…';
+				const sparklineContainer = document.createElement('div');
+				sparklineContainer.className = 'portfolio-sparkline-container';
+				sparklineContainer.append(sparkline, sparklineStatus);
+				const historyRequest =
+					historyRequests.get(entry.symbol) ??
+					fetchStockHistory(entry.symbol, '1mo').then((history) => {
+						historyRequests.set(entry.symbol, Promise.resolve(history));
+						return history;
+					}).catch((error: unknown) => {
+						historyRequests.delete(entry.symbol);
+						throw error;
+					});
+				historyRequests.set(entry.symbol, historyRequest);
+				void historyRequest.then(
+					(history) => {
+						if (!item.isConnected) return;
+						renderStockSparkline(sparkline, history);
+						sparklineStatus.remove();
+					},
+					(error: unknown) => {
+						if (!item.isConnected) return;
+						sparklineStatus.textContent =
+							error instanceof Error ? 'Chart unavailable' : 'Unable to load chart';
+						sparklineStatus.title =
+							error instanceof Error ? error.message : 'Price history could not be reached.';
+						sparkline.setAttribute('aria-label', `${entry.name} (${entry.symbol}) chart unavailable`);
+					},
+				);
+
+				const allocation = document.createElement('p');
+				allocation.className = 'portfolio-allocation';
+				allocation.textContent = `${entry.allocation.toFixed(2)}%`;
+
+				const remove = document.createElement('button');
+				remove.className = 'portfolio-remove';
+				remove.type = 'button';
+				remove.textContent = 'Remove';
+				remove.setAttribute('aria-label', `Remove ${entry.symbol} from portfolio`);
+				remove.addEventListener('click', () => {
+					try {
+						removePortfolioEntry(entry.symbol);
+						renderPortfolio();
+					} catch (error) {
+						status.hidden = false;
+						status.textContent = error instanceof Error ? error.message : 'Unable to update your portfolio.';
+					}
+				});
+				item.append(identity, sparklineContainer, allocation, remove);
+				list.append(item);
+			}
+		} catch (error) {
+			status.hidden = false;
+			status.textContent = error instanceof Error ? error.message : 'Unable to read your portfolio.';
+			total.hidden = true;
+			composition.hidden = true;
+			composition.replaceChildren();
+			empty.hidden = true;
+			list.replaceChildren();
+		}
+	};
+
+	window.addEventListener('storage', (event) => {
+		if (event.key === PORTFOLIO_STORAGE_KEY) renderPortfolio();
+	});
+	renderPortfolio();
+</script>
+
+<style>
+	.portfolio-page {
+		width: min(100% - 2rem, 52rem);
+		margin: 0 auto;
+		padding: 3rem 0;
+	}
+	h1 {
+		margin: 0;
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 2rem;
+		font-weight: 400;
+	}
+	.portfolio-intro {
+		margin: 0.5rem 0 1.5rem;
+		color: #68736e;
+		font-size: 0.9rem;
+	}
+	.portfolio-status,
+	.portfolio-empty {
+		color: #68736e;
+		font-size: 0.9rem;
+	}
+	.portfolio-total {
+		margin: 0 0 1rem;
+		color: #174e40;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+	.portfolio-composition {
+		display: flex;
+		height: 8rem;
+		margin: 0 0 1.5rem;
+		padding: 0;
+		overflow: hidden;
+		border-radius: 6px;
+		list-style: none;
+	}
+	.portfolio-composition[hidden] {
+		display: none;
+	}
+	:global(.portfolio-composition-segment) {
+		display: flex;
+		min-width: 0;
+		box-sizing: border-box;
+		flex-direction: column;
+		justify-content: space-between;
+		gap: 0.5rem;
+		overflow: hidden;
+		border-right: 2px solid #fff;
+		padding: 0.75rem;
+		color: #fff;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+	:global(.portfolio-composition-segment:last-child) {
+		border-right: 0;
+	}
+	:global(.portfolio-composition-segment span) {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.portfolio-items {
+		margin: 0;
+		padding: 0;
+		border-top: 1px solid rgb(var(--gray-light));
+		list-style: none;
+	}
+	:global(.portfolio-item) {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 120px auto auto;
+		align-items: center;
+		gap: 1rem;
+		border-bottom: 1px solid rgb(var(--gray-light));
+		padding: 1rem 0;
+	}
+	:global(.portfolio-identity h2) {
+		margin: 0;
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 1rem;
+		font-weight: 400;
+		overflow-wrap: anywhere;
+	}
+	:global(.portfolio-identity-heading) {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	:global(.portfolio-symbol) {
+		margin: 0;
+		color: #174e40;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+	:global(.portfolio-added-price) {
+		margin: 0.25rem 0 0;
+		color: #68736e;
+		font-size: 0.8rem;
+	}
+	:global(.portfolio-sparkline-container) {
+		display: flex;
+		min-width: 0;
+		align-items: center;
+		justify-content: center;
+	}
+	:global(.portfolio-sparkline) {
+		display: block;
+		width: 120px;
+		max-width: 100%;
+		height: 44px;
+	}
+	:global(.portfolio-sparkline-status) {
+		color: #68736e;
+		font-size: 0.7rem;
+	}
+	:global(.portfolio-allocation) {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 700;
+	}
+	:global(.portfolio-remove) {
+		min-height: 40px;
+		border: 1px solid #174e40;
+		border-radius: 3px;
+		background: #fff;
+		padding: 0.4rem 0.75rem;
+		color: #174e40;
+		font: inherit;
+		cursor: pointer;
+	}
+	:global(.portfolio-remove:hover) {
+		background: #174e40;
+		color: #fff;
+	}
+	:global(.portfolio-remove:focus-visible) {
+		outline: 3px solid #95c7ae;
+		outline-offset: 2px;
+	}
+	@media (max-width: 520px) {
+		:global(.portfolio-item) {
+			grid-template-columns: minmax(0, 1fr) 72px auto auto;
+			gap: 0.5rem;
+		}
+		:global(.portfolio-sparkline-container) {
+			grid-column: 2;
+			grid-row: 1 / span 2;
+		}
+		:global(.portfolio-allocation) {
+			grid-column: 1;
+		}
+		:global(.portfolio-remove) {
+			grid-column: 4;
+			grid-row: 1 / span 2;
+		}
+	}
+</style>

@@ -27,6 +27,7 @@ import Layout from '../layouts/BlogPost.astro';
 					<p id="range-title" class="eyebrow">Past year</p>
 					<div class="performance-title-row">
 						<h3 id="performance-title"></h3>
+						<button id="portfolio-add" class="portfolio-add" type="button">Add to portfolio</button>
 						<button
 							id="watchlist-toggle"
 							class="watchlist-toggle"
@@ -39,6 +40,7 @@ import Layout from '../layouts/BlogPost.astro';
 				</div>
 				<p id="period-change" class="period-change"></p>
 			</div>
+			<p id="portfolio-action-status" class="search-status" role="status" aria-live="polite" hidden></p>
 			<p id="watchlist-action-status" class="search-status" role="status" aria-live="polite" hidden></p>
 			<p id="chart-status" class="search-status" role="status" aria-live="polite"></p>
 			<svg id="stock-chart" class="stock-chart" viewBox="0 0 760 340" role="img" aria-hidden="true"></svg>
@@ -52,6 +54,26 @@ import Layout from '../layouts/BlogPost.astro';
 			<p class="chart-footnote">Historical share prices are not a guarantee of future performance.</p>
 		</section>
 	</section>
+	<dialog id="portfolio-allocation-dialog" class="allocation-dialog" aria-labelledby="portfolio-allocation-title">
+		<form id="portfolio-allocation-form">
+			<h2 id="portfolio-allocation-title">Set portfolio allocation</h2>
+			<p id="portfolio-allocation-help"></p>
+			<p id="new-stock-allocation-label" class="new-stock-allocation-label">New stock allocation</p>
+			<div class="allocation-controls">
+				<div class="allocation-stepper">
+					<button type="button" data-allocation-step="-1" data-allocation-target="new" aria-label="Decrease new stock allocation">-</button>
+					<output id="new-stock-allocation" aria-live="polite">10%</output>
+					<button type="button" data-allocation-step="1" data-allocation-target="new" aria-label="Increase new stock allocation">+</button>
+				</div>
+			</div>
+			<p id="allocation-total" class="allocation-total" aria-live="polite"></p>
+			<div id="existing-allocation-inputs" class="existing-allocation-inputs"></div>
+			<div class="allocation-actions">
+				<button type="submit">Add holding</button>
+				<button id="portfolio-allocation-cancel" type="button">Cancel</button>
+			</div>
+		</form>
+	</dialog>
 </Layout>
 
 <style>
@@ -68,6 +90,11 @@ import Layout from '../layouts/BlogPost.astro';
 		updateWatchlistPrice,
 		WATCHLIST_STORAGE_KEY,
 	} from '../lib/watchlist';
+	import {
+		addPortfolioEntry,
+		getPortfolio,
+		PORTFOLIO_STORAGE_KEY,
+	} from '../lib/portfolio';
 	import {
 		fetchStockHistory,
 		renderStockChart,
@@ -93,6 +120,16 @@ import Layout from '../layouts/BlogPost.astro';
 	const performanceTitle = document.querySelector<HTMLElement>('#performance-title');
 	const watchlistButton = document.querySelector<HTMLButtonElement>('#watchlist-toggle');
 	const watchlistActionStatus = document.querySelector<HTMLElement>('#watchlist-action-status');
+	const portfolioButton = document.querySelector<HTMLButtonElement>('#portfolio-add');
+	const portfolioActionStatus = document.querySelector<HTMLElement>('#portfolio-action-status');
+	const allocationDialog = document.querySelector<HTMLDialogElement>('#portfolio-allocation-dialog');
+	const allocationForm = document.querySelector<HTMLFormElement>('#portfolio-allocation-form');
+	const newStockAllocationLabel = document.querySelector<HTMLElement>('#new-stock-allocation-label');
+	const newStockAllocationDisplay = document.querySelector<HTMLOutputElement>('#new-stock-allocation');
+	const allocationHelp = document.querySelector<HTMLElement>('#portfolio-allocation-help');
+	const existingAllocationInputs = document.querySelector<HTMLElement>('#existing-allocation-inputs');
+	const allocationTotal = document.querySelector<HTMLElement>('#allocation-total');
+	const allocationCancel = document.querySelector<HTMLButtonElement>('#portfolio-allocation-cancel');
 	const rangeTitle = document.querySelector<HTMLElement>('#range-title');
 	const periodChange = document.querySelector<HTMLElement>('#period-change');
 	const chartStatus = document.querySelector<HTMLElement>('#chart-status');
@@ -101,6 +138,230 @@ import Layout from '../layouts/BlogPost.astro';
 	let chartRequest: AbortController | undefined;
 	let selectedCompany: CompanyResult | undefined;
 	let latestHistory: StockHistory | undefined;
+	let newStockAllocation = 10;
+	let activeExistingAllocation: HTMLInputElement | undefined;
+
+	const updatePortfolioButton = (company: CompanyResult) => {
+		if (!portfolioButton) return;
+		const hasPrice = latestHistory?.prices.at(-1) !== undefined;
+		const inPortfolio = getPortfolio().some(
+			(entry) => entry.symbol.toUpperCase() === company.symbol.toUpperCase(),
+		);
+		portfolioButton.disabled = inPortfolio || !hasPrice;
+		portfolioButton.textContent = inPortfolio
+			? 'In portfolio'
+			: hasPrice
+				? 'Add to portfolio'
+				: 'Price unavailable';
+	};
+
+	const savePortfolioHolding = (
+		allocation?: number,
+		existingAllocations?: Record<string, number>,
+	) => {
+		if (!selectedCompany || !portfolioActionStatus) return;
+		const latestPrice = latestHistory?.prices.at(-1);
+		if (!latestPrice || !latestHistory) {
+			throw new Error('A stock price is not available yet. Try again when price history has loaded.');
+		}
+		addPortfolioEntry({
+			symbol: selectedCompany.symbol,
+			name: selectedCompany.name,
+			exchange: selectedCompany.exchange,
+			price: latestPrice.close,
+			currency: latestHistory.currency,
+			priceDate: latestPrice.date,
+		}, allocation, undefined, existingAllocations);
+		portfolioActionStatus.hidden = false;
+		portfolioActionStatus.textContent = `${selectedCompany.symbol} added to your portfolio.`;
+		updatePortfolioButton(selectedCompany);
+	};
+
+	const updateAllocationTotal = () => {
+		if (!existingAllocationInputs || !allocationTotal) return;
+		const total = newStockAllocation + Array.from(
+			existingAllocationInputs.querySelectorAll<HTMLInputElement>('input[data-symbol]'),
+		).reduce((sum, input) => sum + Number(input.value || 0), 0);
+		const isValid = Math.abs(total - 100) <= 0.01;
+		allocationTotal.textContent = `Total: ${total.toFixed(2)}%${isValid ? '' : ' — must equal 100%'}`;
+		allocationTotal.classList.toggle('is-valid', isValid);
+	};
+	const normalizeExistingAllocation = (input: HTMLInputElement) => {
+		const value = Number(input.value);
+		if (input.value === '' || !Number.isFinite(value) || Number.isInteger(value)) return;
+		const minimum = Number(input.min);
+		const maximum = Number(input.max);
+		input.value = String(Math.min(maximum, Math.max(minimum, Math.floor(value) + 0.5)));
+	};
+	existingAllocationInputs?.addEventListener('input', (event) => {
+		const target = event.target;
+		if (target instanceof HTMLInputElement && target.dataset.symbol) updateAllocationTotal();
+	});
+	const normalizeActiveExistingAllocation = () => {
+		if (!activeExistingAllocation) return;
+		normalizeExistingAllocation(activeExistingAllocation);
+		activeExistingAllocation = undefined;
+		updateAllocationTotal();
+	};
+	document.addEventListener('focusin', (event) => {
+		const target = event.target;
+		if (target instanceof HTMLInputElement && target.dataset.symbol) {
+			if (activeExistingAllocation !== target) normalizeActiveExistingAllocation();
+			activeExistingAllocation = target;
+		} else {
+			normalizeActiveExistingAllocation();
+		}
+	});
+	document.addEventListener('pointerdown', (event) => {
+		const target = document.activeElement;
+		if (
+			target instanceof HTMLInputElement &&
+			target.dataset.symbol &&
+			event.target !== target
+		) {
+			normalizeExistingAllocation(target);
+			activeExistingAllocation = undefined;
+			updateAllocationTotal();
+		}
+	});
+	allocationForm?.addEventListener('click', (event) => {
+		const target = event.target;
+		if (!(target instanceof HTMLButtonElement) || !target.dataset.allocationStep) return;
+		const controls = target.closest('.allocation-controls');
+		if (target.dataset.allocationTarget === 'new') {
+			newStockAllocation = Math.min(99, Math.max(1, newStockAllocation + Number(target.dataset.allocationStep)));
+			if (newStockAllocationDisplay) newStockAllocationDisplay.value = `${newStockAllocation}%`;
+			updateAllocationTotal();
+			return;
+		}
+		const input = controls?.querySelector<HTMLInputElement>('input[type="number"]');
+		if (!input) return;
+		const nextValue = Number(input.value) + Number(target.dataset.allocationStep);
+		const min = Number(input.min);
+		const max = Number(input.max);
+		input.value = Math.min(max, Math.max(min, nextValue)).toFixed(0);
+		input.dispatchEvent(new Event('input', { bubbles: true }));
+	});
+
+	portfolioButton?.addEventListener('click', () => {
+		if (!selectedCompany || !portfolioActionStatus) return;
+		try {
+			const entries = getPortfolio();
+			if (entries.length === 0) {
+				savePortfolioHolding();
+				return;
+			}
+			if (
+				!allocationDialog ||
+				!newStockAllocationLabel ||
+				!newStockAllocationDisplay ||
+				!allocationHelp ||
+				!existingAllocationInputs ||
+				!allocationTotal
+			) {
+				throw new Error('The portfolio allocation form is unavailable.');
+			}
+			newStockAllocation = 10;
+			newStockAllocationDisplay.value = '10%';
+			newStockAllocationLabel.textContent = `New stock allocation (${selectedCompany.symbol})`;
+			const newStockButtons = allocationDialog.querySelectorAll<HTMLButtonElement>('[data-allocation-target="new"]');
+			newStockButtons[0]?.setAttribute('aria-label', `Decrease ${selectedCompany.symbol} allocation`);
+			newStockButtons[1]?.setAttribute('aria-label', `Increase ${selectedCompany.symbol} allocation`);
+			allocationHelp.textContent =
+				'Set the new stock’s allocation. The total must equal 100%.';
+			existingAllocationInputs.replaceChildren();
+			for (const entry of entries) {
+				const label = document.createElement('label');
+				label.htmlFor = `existing-allocation-${entry.symbol}`;
+				label.textContent = `${entry.name} (${entry.symbol})`;
+				const controls = document.createElement('div');
+				controls.className = 'allocation-controls';
+				const input = document.createElement('input');
+				input.id = label.htmlFor;
+				input.type = 'number';
+				input.min = '0.5';
+				input.max = '100';
+				input.step = 'any';
+				input.required = true;
+				input.value = entry.allocation.toFixed(2);
+				input.dataset.symbol = entry.symbol;
+				input.addEventListener('keydown', (event) => {
+					if (event.key === 'Tab') {
+						normalizeExistingAllocation(input);
+						activeExistingAllocation = undefined;
+						updateAllocationTotal();
+					}
+				});
+				const stepper = document.createElement('div');
+				stepper.className = 'allocation-stepper';
+				const decrease = document.createElement('button');
+				decrease.type = 'button';
+				decrease.dataset.allocationStep = '-1';
+				decrease.setAttribute('aria-label', `Decrease ${entry.symbol} allocation`);
+				decrease.textContent = '-';
+				const percentage = document.createElement('span');
+				percentage.setAttribute('aria-hidden', 'true');
+				percentage.textContent = '%';
+				const increase = document.createElement('button');
+				increase.type = 'button';
+				increase.dataset.allocationStep = '1';
+				increase.setAttribute('aria-label', `Increase ${entry.symbol} allocation`);
+				increase.textContent = '+';
+				stepper.append(decrease, percentage, increase);
+				controls.append(input, stepper);
+				existingAllocationInputs.append(label, controls);
+			}
+			updateAllocationTotal();
+			allocationDialog.showModal();
+			newStockButtons[0]?.focus();
+		} catch (error) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent =
+				error instanceof Error ? error.message : 'Unable to update your portfolio.';
+		}
+	});
+
+	allocationForm?.addEventListener('submit', (event) => {
+		event.preventDefault();
+		if (!existingAllocationInputs || !allocationTotal || !portfolioActionStatus) return;
+		const allocationInputs = Array.from(
+			existingAllocationInputs.querySelectorAll<HTMLInputElement>('input[data-symbol]'),
+		);
+		for (const input of allocationInputs) normalizeExistingAllocation(input);
+		activeExistingAllocation = undefined;
+		updateAllocationTotal();
+		const allocation = newStockAllocation;
+		if (
+			!Number.isFinite(allocation) ||
+			allocation <= 0 ||
+			allocation >= 100 ||
+			!Number.isInteger(allocation)
+		) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent = 'Choose a whole percentage from 1% to 99%.';
+			return;
+		}
+		try {
+			const existingAllocations = Object.fromEntries(
+				allocationInputs.flatMap((input) =>
+					input.dataset.symbol ? [[input.dataset.symbol, Number(input.value)]] : [],
+				),
+			);
+			const total = allocation + Object.values(existingAllocations).reduce((sum, value) => sum + value, 0);
+			if (Math.abs(total - 100) > 0.01) {
+				allocationTotal.textContent = `Total: ${total.toFixed(2)}% — must equal 100%`;
+				allocationTotal.classList.remove('is-valid');
+				return;
+			}
+			savePortfolioHolding(allocation, existingAllocations);
+			allocationDialog?.close();
+		} catch (error) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent =
+				error instanceof Error ? error.message : 'Unable to update your portfolio.';
+		}
+	});
+	allocationCancel?.addEventListener('click', () => allocationDialog?.close());
 
 	const updateWatchlistButton = (company: CompanyResult) => {
 		if (!watchlistButton) return;
@@ -150,11 +411,16 @@ import Layout from '../layouts/BlogPost.astro';
 	});
 
 	window.addEventListener('storage', (event) => {
-		if (event.key !== WATCHLIST_STORAGE_KEY || !selectedCompany) return;
+		if (!selectedCompany) return;
 		try {
-			updateWatchlistButton(selectedCompany);
+			if (event.key === WATCHLIST_STORAGE_KEY) updateWatchlistButton(selectedCompany);
+			if (event.key === PORTFOLIO_STORAGE_KEY) updatePortfolioButton(selectedCompany);
 		} catch (error) {
-			if (watchlistActionStatus) {
+			if (event.key === PORTFOLIO_STORAGE_KEY && portfolioActionStatus) {
+				portfolioActionStatus.hidden = false;
+				portfolioActionStatus.textContent =
+					error instanceof Error ? error.message : 'Unable to read your portfolio.';
+			} else if (watchlistActionStatus) {
 				watchlistActionStatus.hidden = false;
 				watchlistActionStatus.textContent =
 					error instanceof Error ? error.message : 'Unable to read your watchlist.';
@@ -172,6 +438,7 @@ import Layout from '../layouts/BlogPost.astro';
 		if (selectedCompany?.symbol.toUpperCase() === company.symbol.toUpperCase()) {
 			try {
 				updateWatchlistButton(company);
+				updatePortfolioButton(company);
 			} catch (error) {
 				if (watchlistActionStatus) {
 					watchlistActionStatus.hidden = false;
@@ -189,6 +456,15 @@ import Layout from '../layouts/BlogPost.astro';
 			renderStockChart(stockChart, periodChange, history, range);
 			if (selectedCompany?.symbol.toUpperCase() === company.symbol.toUpperCase()) {
 				latestHistory = history;
+				try {
+					updatePortfolioButton(company);
+				} catch (error) {
+					if (portfolioActionStatus) {
+						portfolioActionStatus.hidden = false;
+						portfolioActionStatus.textContent =
+							error instanceof Error ? error.message : 'Unable to read your portfolio.';
+					}
+				}
 				const latestPrice = history.prices.at(-1);
 				if (latestPrice) {
 					try {
@@ -240,7 +516,7 @@ import Layout from '../layouts/BlogPost.astro';
 		submitButton.disabled = true;
 
 		try {
-			const response = await fetch(`/Api/finance/search?q=${encodeURIComponent(query)}`);
+			const response = await fetch(`/api/finance/search?q=${encodeURIComponent(query)}`);
 			const payload: unknown = await response.json();
 			if (!response.ok) {
 				const message = typeof payload === 'object' && payload !== null && 'error' in payload
@@ -290,6 +566,19 @@ import Layout from '../layouts/BlogPost.astro';
 						watchlistActionStatus.hidden = true;
 						watchlistActionStatus.textContent = '';
 					}
+					if (portfolioActionStatus) {
+						portfolioActionStatus.hidden = true;
+						portfolioActionStatus.textContent = '';
+					}
+					try {
+						updatePortfolioButton(company);
+					} catch (error) {
+						if (portfolioActionStatus) {
+							portfolioActionStatus.hidden = false;
+							portfolioActionStatus.textContent =
+								error instanceof Error ? error.message : 'Unable to read your portfolio.';
+						}
+					}
 					for (const rangeButton of rangeButtons) {
 						rangeButton.setAttribute('aria-pressed', String(rangeButton.dataset.range === '1y'));
 					}
@@ -310,6 +599,15 @@ import Layout from '../layouts/BlogPost.astro';
 	});
 
 	selectedCompany = { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ' };
+	try {
+		updatePortfolioButton(selectedCompany);
+	} catch (error) {
+		if (portfolioActionStatus) {
+			portfolioActionStatus.hidden = false;
+			portfolioActionStatus.textContent =
+				error instanceof Error ? error.message : 'Unable to read your portfolio.';
+		}
+	}
 	showCompanyHistory(selectedCompany, '1y');
 </script>
 
@@ -487,6 +785,133 @@ import Layout from '../layouts/BlogPost.astro';
 	.watchlist-toggle:focus-visible {
 		outline: 3px solid #95c7ae;
 		outline-offset: 2px;
+	}
+	.portfolio-add,
+	.allocation-actions button {
+		min-height: 40px;
+		border: 1px solid #174e40;
+		border-radius: 3px;
+		background: #174e40;
+		padding: 0.45rem 0.75rem;
+		color: #fff;
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.portfolio-add:disabled {
+		background: #68736e;
+		border-color: #68736e;
+		cursor: default;
+	}
+	.portfolio-add:focus-visible,
+	.allocation-actions button:focus-visible {
+		outline: 3px solid #95c7ae;
+		outline-offset: 2px;
+	}
+	.allocation-dialog {
+		width: min(100% - 2rem, 28rem);
+		max-height: calc(100% - 2rem);
+		overflow-y: auto;
+		border: 1px solid #cbd3cd;
+		border-radius: 6px;
+		padding: 1.5rem;
+		color: inherit;
+	}
+	.allocation-dialog::backdrop {
+		background: rgb(0 0 0 / 45%);
+	}
+	.allocation-dialog h2 {
+		margin: 0;
+		font-family: Georgia, 'Times New Roman', serif;
+		font-size: 1.4rem;
+		font-weight: 400;
+	}
+	.allocation-dialog p {
+		color: #68736e;
+		font-size: 0.9rem;
+	}
+	.allocation-dialog label {
+		display: block;
+		margin-bottom: 0.35rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+	:global(.allocation-controls) {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	:global(.allocation-controls input) {
+		width: 100%;
+		min-height: 42px;
+		border: 1px solid #cbd3cd;
+		border-radius: 3px;
+		padding: 0.5rem;
+		font: inherit;
+	}
+	:global(.allocation-controls input::-webkit-inner-spin-button),
+	:global(.allocation-controls input::-webkit-outer-spin-button) {
+		-webkit-appearance: none;
+		appearance: none;
+		margin: 0;
+	}
+	:global(.allocation-controls input) {
+		appearance: textfield;
+	}
+	:global(.allocation-stepper) {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	:global(.allocation-stepper button) {
+		width: 32px;
+		height: 32px;
+		border: 1px solid #174e40;
+		border-radius: 3px;
+		background: #fff;
+		color: #174e40;
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	:global(.allocation-stepper output) {
+		min-width: 3.5rem;
+		text-align: center;
+		font-weight: 700;
+	}
+	:global(.allocation-stepper button:hover) {
+		background: #174e40;
+		color: #fff;
+	}
+	:global(.allocation-stepper button:focus-visible) {
+		outline: 3px solid #95c7ae;
+		outline-offset: 2px;
+	}
+	.existing-allocation-inputs {
+		display: grid;
+		gap: 0.5rem;
+		margin-top: 1rem;
+	}
+	:global(.existing-allocation-inputs label) {
+		margin: 0;
+	}
+	.allocation-total {
+		margin-bottom: 0;
+		font-weight: 700;
+	}
+	.allocation-total.is-valid {
+		color: #26735e;
+	}
+	.allocation-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		margin-top: 1.25rem;
+	}
+	.allocation-actions button:last-child {
+		background: #fff;
+		color: #174e40;
 	}
 	.period-change {
 		margin: 0;
