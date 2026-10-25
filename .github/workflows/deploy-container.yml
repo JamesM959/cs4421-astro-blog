@@ -1,6 +1,6 @@
 name: Deploy Container to AWS
 on:
-  pull:
+  pull_request:
     branches: [main]
 
 jobs:
