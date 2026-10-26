@@ -1,8 +1,9 @@
-
 {
   "family": "astro-blog",
   "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
   "cpu": "512",
   "memory": "1024",
   "executionRoleArn": "arn:aws:iam::723553991839:role/service-role/ecsTaskExecutionRole",
@@ -31,6 +32,16 @@
           "value": "production"
         }
       ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:4321/api/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 3,
+        "retries": 3,
+        "startPeriod": 60
+      },
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
