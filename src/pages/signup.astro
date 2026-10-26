@@ -1,0 +1,88 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import { SITE_TITLE } from '../styles/consts';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Sign up | ${SITE_TITLE}`} description="Create a Gaarp account." />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<section class="account-page" aria-labelledby="signup-title">
+				<p class="eyebrow">Get started</p>
+				<h1 id="signup-title">Create your account</h1>
+				<p class="account-intro">Sign up to get started with Gaarp.</p>
+				<form>
+					<label for="name">Name</label>
+					<input id="name" name="name" type="text" autocomplete="name" required />
+					<label for="email">Email address</label>
+					<input id="email" name="email" type="email" autocomplete="email" required />
+					<label for="password">Password</label>
+					<input id="password" name="password" type="password" autocomplete="new-password" required />
+					<button type="submit" disabled>Create account</button>
+				</form>
+				<p class="account-note">Account creation is not available yet.</p>
+				<p class="account-switch">Already have an account? <a href="/login">Log in</a></p>
+			</section>
+		</main>
+	</body>
+</html>
+
+<style>
+	.account-page {
+		max-width: 440px;
+		margin: 0 auto;
+	}
+	.eyebrow {
+		margin: 0 0 0.5rem;
+		color: var(--accent);
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	h1 {
+		margin-bottom: 0.5rem;
+	}
+	.account-intro {
+		margin-top: 0;
+		color: rgb(var(--gray));
+	}
+	form {
+		display: grid;
+		gap: 0.6rem;
+		margin-top: 2rem;
+	}
+	input {
+		box-sizing: border-box;
+		width: 100%;
+		padding: 0.75rem;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 6px;
+	}
+	form button {
+		margin-top: 0.75rem;
+		padding: 0.75rem;
+		border: 0;
+		border-radius: 6px;
+		background: var(--accent);
+		color: white;
+		font: inherit;
+		font-size: 1rem;
+	}
+	form button:disabled {
+		cursor: not-allowed;
+		opacity: 0.6;
+	}
+	.account-note {
+		color: rgb(var(--gray));
+		font-size: 0.9rem;
+	}
+	.account-switch {
+		margin-top: 2rem;
+	}
+</style>
