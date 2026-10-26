@@ -1,0 +1,44 @@
+
+{
+  "family": "astro-blog",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "astro-blog",
+      "image": "placeholder",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 4321,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "HOST",
+          "value": "0.0.0.0"
+        },
+        {
+          "name": "PORT",
+          "value": "4321"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/astro-blog",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
