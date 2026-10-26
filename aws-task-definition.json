@@ -5,7 +5,7 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::723553991839:role/ecsTaskExecutionRole",
+  "executionRoleArn": "arn:aws:iam::723553991839:role/service-role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "astro-blog",
