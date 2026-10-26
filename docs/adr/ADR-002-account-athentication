@@ -1,0 +1,12 @@
+# ADR-002: Authentication for login/sign up
+
+## Status: Accepted (Date: 26 October)
+
+## Context
+Gaarp needs each user to have a seperate account to use features such as the watchlist
+and portfolio, additionally there are plans to have a page to coollaberate which will require a unique account access for each user
+
+## Decision
+Super will be used for login/sign up authentication
+
+## Consequences
