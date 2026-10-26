@@ -41,3 +41,11 @@ jobs:
         task-definition: aws-task-definition.json
         container-name: astro-blog
         image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy to ECS service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: astro-blog-service
+        cluster: astro-blog-cluster
+    
