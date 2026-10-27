@@ -1,12 +1,21 @@
-# ADR-002: Authentication for login/sign up
+# ADR-002: Authentication for Login and Sign-up
 
-## Status: Accepted (Date: 26 October)
+## Status: Accepted (Date: October 26 2026)
 
 ## Context
-Gaarp needs each user to have a seperate account to use features such as the watchlist
-and portfolio, additionally there are plans to have a page to coollaberate which will require a unique account access for each user
+Gaarp needs individual accounts for personal features
+such as watchlists and portfolios. Collaboration features will also
+need to associate access and contributions with individual users.
 
 ## Decision
-Super will be used for login/sign up authentication
+We will impliment Supabase to provide authentication for login and sign up.
+Application features that require a looged in user will use the authenticated
+user identity to associate data with that user's account.
 
 ## Consequences
+Positive: A managed authentication service avoids maintaining a custom
+  credential system.
+Positive: A consistent user identity supports user specific data and
+ collaboration features.
+Negative: Authentication depends on an external service and requires
+  configuring its credentials, access policies, and application integration.

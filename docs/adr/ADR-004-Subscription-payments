@@ -1,0 +1,25 @@
+# ADR-004: Subscription Payments
+
+## Status: pending
+
+## Context
+Running the site on AWS incurs computing costs. Paid subscription tiers can help
+sustain the site. The application needs a way to process recurring payments 
+and determine which features a subscriber may use.
+
+## Decision
+Stripe will process subscription payments and manage billing. Supabase will
+provide the application services used to associate Stripe customers and
+subscription status with authenticated users. The subscription status will 
+be used to decide access to paid features.
+
+## Consequences
+Positive: Stripe handles recurring billing and payment processing rather
+  than requiring a custom payment system.
+Positive: Linking subscription status to Supabase users provides an
+  application identity for paid-feature access.
+Negative: Subscription state must remain synchronized with Stripe, and
+  access to paid features must be enforced by the application.
+
+## References
+https://github.com/supabase-community/nextjs-subscription-payments

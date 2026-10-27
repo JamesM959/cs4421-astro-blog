@@ -1,0 +1,23 @@
+# ADR-004: Host the Site on Amazon ECS
+
+## Status: Accepted (Date: October 26 2026)
+
+## Context
+ADR-001 moved the site from static hosting to a server-rendered docker container. The application needs a container runtime on AWS. Hosting supports replacing unhealthy tasks and deploying new versions without interrupting the site.
+
+## Decision
+The container will run on Amazon ECS using Fargate. GitHub Actions will
+run the unit tests, build the Docker image, push it to Amazon ECR, and deploy the updated task definition to the ECS service.
+
+## Alternatives considered
+Amazon EC2: Provides control over the host, but requires managing and
+  the underlying instances.
+Amazon EKS: Provides Kubernetes orchestration, but adds operational
+  complexity that is not needed for this application.
+
+## Consequences
+Positive: Fargate runs containers without requiring managing host
+  instances.
+Positive: ECS health checks and task replacement can help keep the service
+  available when a task becomes unhealthy.
+Negative: The service incurs compute costs, and needs IAM permissions configured
