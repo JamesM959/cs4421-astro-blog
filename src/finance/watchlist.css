@@ -13,7 +13,7 @@
 
 .eyebrow {
 	margin: 0 0 0.4rem;
-	color: #26735e;
+	color: var(--brand-hover);
 	font-size: 0.75rem;
 	font-weight: 700;
 	letter-spacing: 0.08em;
@@ -22,13 +22,13 @@
 
 .watchlist-intro {
 	margin: 0.5rem 0 1.5rem;
-	color: #68736e;
+	color: var(--muted-color);
 	font-size: 0.9rem;
 }
 
 .watchlist-status,
 .watchlist-empty {
-	color: #68736e;
+	color: var(--muted-color);
 	font-size: 0.9rem;
 }
 
@@ -65,11 +65,11 @@
 }
 
 .watchlist-open:hover h2 {
-	color: #26735e;
+	color: var(--brand-hover);
 }
 
 .watchlist-open:focus-visible {
-	outline: 2px solid #26735e;
+	outline: 2px solid var(--brand-hover);
 	outline-offset: 4px;
 }
 
@@ -84,12 +84,12 @@
 .watchlist-symbol,
 .watchlist-price {
 	margin: 0.2rem 0 0;
-	color: #68736e;
+	color: var(--muted-color);
 	font-size: 0.85rem;
 }
 
 .watchlist-symbol {
-	color: #174e40;
+	color: var(--brand);
 	font-weight: 700;
 }
 
@@ -106,10 +106,10 @@
 	width: 40px;
 	height: 40px;
 	place-items: center;
-	border: 1px solid #174e40;
+	border: 1px solid var(--brand);
 	border-radius: 50%;
-	background: #fff;
-	color: #174e40;
+	background: var(--surface);
+	color: var(--brand);
 	font: inherit;
 	font-size: 1.5rem;
 	line-height: 1;
@@ -117,12 +117,12 @@
 }
 
 .watchlist-remove:hover {
-	background: #174e40;
+	background: var(--brand);
 	color: #fff;
 }
 
 .watchlist-remove:focus-visible {
-	outline: 3px solid #95c7ae;
+	outline: 3px solid var(--focus-ring);
 	outline-offset: 2px;
 }
 
@@ -141,7 +141,7 @@
 
 .watchlist-range-title {
 	margin: 0 0 0.35rem;
-	color: #26735e;
+	color: var(--brand-hover);
 	font-size: 0.75rem;
 	font-weight: 700;
 	letter-spacing: 0.08em;
@@ -163,7 +163,7 @@
 }
 
 .period-change.positive {
-	color: #26735e;
+	color: var(--brand-hover);
 }
 
 .period-change.negative {
@@ -172,7 +172,7 @@
 
 .watchlist-chart-status {
 	margin: 1rem 0 0;
-	color: #68736e;
+	color: var(--muted-color);
 	font-size: 0.85rem;
 }
 
@@ -191,24 +191,24 @@
 }
 
 .stock-chart-grid line {
-	stroke: #dfe5df;
+	stroke: var(--soft-border);
 	stroke-width: 1;
 	vector-effect: non-scaling-stroke;
 }
 
 .stock-chart-labels {
-	fill: #78817c;
+	fill: var(--chart-label);
 	font-family: var(--font-atkinson);
 	font-size: 12px;
 }
 
 .stock-chart-area.positive {
-	fill: #d9eee4;
+	fill: var(--positive-fill);
 	opacity: 0.8;
 }
 
 .stock-chart-area.negative {
-	fill: #f5dfd9;
+	fill: var(--negative-fill);
 	opacity: 0.8;
 }
 
@@ -221,7 +221,7 @@
 }
 
 .stock-chart-line.positive {
-	stroke: #26735e;
+	stroke: var(--brand-hover);
 }
 
 .stock-chart-line.negative {
@@ -237,30 +237,30 @@
 
 .watchlist-range-controls button {
 	min-height: 38px;
-	border: 1px solid #cbd3cd;
+	border: 1px solid var(--border-color);
 	border-radius: 3px;
-	background: #fff;
+	background: var(--surface);
 	padding: 0.45rem 0.7rem;
-	color: #46514c;
+	color: var(--control-color);
 	font: inherit;
 	font-size: 0.8rem;
 	cursor: pointer;
 }
 
 .watchlist-range-controls button[aria-pressed='true'] {
-	border-color: #174e40;
-	background: #174e40;
+	border-color: var(--brand);
+	background: var(--brand);
 	color: #fff;
 }
 
 .watchlist-range-controls button:focus-visible {
-	outline: 3px solid #95c7ae;
+	outline: 3px solid var(--focus-ring);
 	outline-offset: 2px;
 }
 
 .watchlist-chart-footnote {
 	margin: 0.25rem 0 0;
-	color: #68736e;
+	color: var(--muted-color);
 	font-size: 0.75rem;
 }
 
