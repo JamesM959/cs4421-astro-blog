@@ -10,13 +10,21 @@ export class StaticSiteStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps)  {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
-
-    // example resource
-    // const queue = new sqs.Queue(this, 'CdkQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
-
+    const rewriteFunction = new cloudfront.Function(this, 'IndexRewriteFunction', {
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+      code: cloudfront.FunctionCode.fromInline(`
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri;
+          if (uri.endsWith('/')) {
+            request.uri += 'index.html';
+          } else if (!uri.split('/').pop().includes('.')) {
+            request.uri += '/index.html';
+          }
+          return request;
+        }
+      `),
+    });
     // S3 bucket for website content
     const bucket = new s3.Bucket(this, 'SiteBucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
