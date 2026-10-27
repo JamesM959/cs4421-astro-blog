@@ -197,17 +197,17 @@ import { SITE_TITLE } from '../styles/consts';
 	}
 	.portfolio-intro {
 		margin: 0.5rem 0 1.5rem;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.9rem;
 	}
 	.portfolio-status,
 	.portfolio-empty {
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.9rem;
 	}
 	.portfolio-total {
 		margin: 0 0 1rem;
-		color: #174e40;
+		color: var(--brand);
 		font-size: 1rem;
 		font-weight: 700;
 	}
@@ -231,7 +231,7 @@ import { SITE_TITLE } from '../styles/consts';
 		justify-content: space-between;
 		gap: 0.5rem;
 		overflow: hidden;
-		border-right: 2px solid #fff;
+		border-right: 2px solid var(--surface);
 		padding: 0.75rem;
 		color: #fff;
 		font-size: 0.85rem;
@@ -274,13 +274,13 @@ import { SITE_TITLE } from '../styles/consts';
 	}
 	:global(.portfolio-symbol) {
 		margin: 0;
-		color: #174e40;
+		color: var(--brand);
 		font-size: 0.85rem;
 		font-weight: 700;
 	}
 	:global(.portfolio-added-price) {
 		margin: 0.25rem 0 0;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.8rem;
 	}
 	:global(.portfolio-sparkline-container) {
@@ -295,8 +295,14 @@ import { SITE_TITLE } from '../styles/consts';
 		max-width: 100%;
 		height: 44px;
 	}
+	:global(.portfolio-sparkline path.positive) {
+		stroke: var(--brand-hover);
+	}
+	:global(.portfolio-sparkline path.negative) {
+		stroke: #a33d2e;
+	}
 	:global(.portfolio-sparkline-status) {
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.7rem;
 	}
 	:global(.portfolio-allocation) {
@@ -306,20 +312,20 @@ import { SITE_TITLE } from '../styles/consts';
 	}
 	:global(.portfolio-remove) {
 		min-height: 40px;
-		border: 1px solid #174e40;
+		border: 1px solid var(--brand);
 		border-radius: 3px;
-		background: #fff;
+		background: var(--surface);
 		padding: 0.4rem 0.75rem;
-		color: #174e40;
+		color: var(--brand);
 		font: inherit;
 		cursor: pointer;
 	}
 	:global(.portfolio-remove:hover) {
-		background: #174e40;
+		background: var(--brand);
 		color: #fff;
 	}
 	:global(.portfolio-remove:focus-visible) {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 	@media (max-width: 520px) {

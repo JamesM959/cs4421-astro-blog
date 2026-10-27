@@ -96,7 +96,7 @@ export function renderStockSparkline(stockChart: SVGSVGElement, history: StockHi
 	const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 	line.setAttribute('d', pathData);
 	line.setAttribute('fill', 'none');
-	line.setAttribute('stroke', change >= 0 ? '#26735e' : '#a34242');
+	line.classList.add(change >= 0 ? 'positive' : 'negative');
 	line.setAttribute('stroke-width', '2');
 	line.setAttribute('stroke-linecap', 'round');
 	line.setAttribute('stroke-linejoin', 'round');

@@ -3,8 +3,8 @@ import Layout from '../layouts/BlogPost.astro';
 ---
 
 <Layout
-	title="About Me"
-	description="Learn about this blog and search public companies by name or ticker."
+	title="Research"
+	description="Search public companies by name or ticker and explore their performance."
 	pubDate={new Date('August 08 2021')}
 >
 
@@ -617,7 +617,7 @@ import Layout from '../layouts/BlogPost.astro';
 	}
 	.eyebrow {
 		margin: 0 0 0.4rem;
-		color: #26735e;
+		color: var(--brand-hover);
 		font-size: 0.75rem;
 		font-weight: 700;
 		letter-spacing: 0.08em;
@@ -631,7 +631,7 @@ import Layout from '../layouts/BlogPost.astro';
 	}
 	.search-description {
 		margin: 0.5rem 0 1.25rem;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.9rem;
 	}
 	#company-search-form label {
@@ -648,14 +648,14 @@ import Layout from '../layouts/BlogPost.astro';
 		width: 100%;
 		min-width: 0;
 		min-height: 48px;
-		border: 1px solid #cbd3cd;
+		border: 1px solid var(--border-color);
 		border-radius: 3px;
 		padding: 0.65rem 0.75rem;
 		font: inherit;
 		font-size: 1rem;
 	}
 	.search-controls input:focus-visible {
-		outline: 2px solid #26735e;
+		outline: 2px solid var(--brand-hover);
 		outline-offset: 2px;
 	}
 	.search-controls button {
@@ -663,7 +663,7 @@ import Layout from '../layouts/BlogPost.astro';
 		min-height: 48px;
 		border: 0;
 		border-radius: 3px;
-		background: #174e40;
+		background: var(--brand);
 		padding: 0.65rem 1rem;
 		color: #fff;
 		font: inherit;
@@ -672,19 +672,19 @@ import Layout from '../layouts/BlogPost.astro';
 		cursor: pointer;
 	}
 	.search-controls button:hover:not(:disabled) {
-		background: #26735e;
+		background: var(--brand-hover);
 	}
 	.search-controls button:disabled {
 		cursor: wait;
 		opacity: 0.65;
 	}
 	.search-controls button:focus-visible {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 3px;
 	}
 	.search-status {
 		margin: 1rem 0 0;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.85rem;
 	}
 	.search-results {
@@ -711,10 +711,10 @@ import Layout from '../layouts/BlogPost.astro';
 		cursor: pointer;
 	}
 	:global(.company-option:hover) {
-		background: #f3f7f4;
+		background: var(--surface-muted);
 	}
 	:global(.company-option:focus-visible) {
-		outline: 2px solid #26735e;
+		outline: 2px solid var(--brand-hover);
 		outline-offset: -2px;
 	}
 	:global(.company-identity) {
@@ -723,12 +723,12 @@ import Layout from '../layouts/BlogPost.astro';
 		min-width: 0;
 	}
 	:global(.company-symbol) {
-		color: #174e40;
+		color: var(--brand);
 		font-size: 0.95rem;
 	}
 	:global(.company-name),
 	:global(.company-exchange) {
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.8rem;
 	}
 	:global(.company-name) {
@@ -769,29 +769,29 @@ import Layout from '../layouts/BlogPost.astro';
 		height: 36px;
 		flex: 0 0 auto;
 		place-items: center;
-		border: 1px solid #174e40;
+		border: 1px solid var(--brand);
 		border-radius: 50%;
-		background: #fff;
-		color: #174e40;
+		background: var(--surface);
+		color: var(--brand);
 		font: inherit;
 		font-size: 1.3rem;
 		line-height: 1;
 		cursor: pointer;
 	}
 	.watchlist-toggle[aria-pressed='true'] {
-		background: #174e40;
+		background: var(--brand);
 		color: #fff;
 	}
 	.watchlist-toggle:focus-visible {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 	.portfolio-add,
 	.allocation-actions button {
 		min-height: 40px;
-		border: 1px solid #174e40;
+		border: 1px solid var(--brand);
 		border-radius: 3px;
-		background: #174e40;
+		background: var(--brand);
 		padding: 0.45rem 0.75rem;
 		color: #fff;
 		font: inherit;
@@ -800,20 +800,20 @@ import Layout from '../layouts/BlogPost.astro';
 		cursor: pointer;
 	}
 	.portfolio-add:disabled {
-		background: #68736e;
-		border-color: #68736e;
+		background: var(--muted-color);
+		border-color: var(--muted-color);
 		cursor: default;
 	}
 	.portfolio-add:focus-visible,
 	.allocation-actions button:focus-visible {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 	.allocation-dialog {
 		width: min(100% - 2rem, 28rem);
 		max-height: calc(100% - 2rem);
 		overflow-y: auto;
-		border: 1px solid #cbd3cd;
+		border: 1px solid var(--border-color);
 		border-radius: 6px;
 		padding: 1.5rem;
 		color: inherit;
@@ -828,7 +828,7 @@ import Layout from '../layouts/BlogPost.astro';
 		font-weight: 400;
 	}
 	.allocation-dialog p {
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.9rem;
 	}
 	.allocation-dialog label {
@@ -845,7 +845,7 @@ import Layout from '../layouts/BlogPost.astro';
 	:global(.allocation-controls input) {
 		width: 100%;
 		min-height: 42px;
-		border: 1px solid #cbd3cd;
+		border: 1px solid var(--border-color);
 		border-radius: 3px;
 		padding: 0.5rem;
 		font: inherit;
@@ -867,10 +867,10 @@ import Layout from '../layouts/BlogPost.astro';
 	:global(.allocation-stepper button) {
 		width: 32px;
 		height: 32px;
-		border: 1px solid #174e40;
+		border: 1px solid var(--brand);
 		border-radius: 3px;
-		background: #fff;
-		color: #174e40;
+		background: var(--surface);
+		color: var(--brand);
 		font: inherit;
 		font-weight: 700;
 		cursor: pointer;
@@ -881,11 +881,11 @@ import Layout from '../layouts/BlogPost.astro';
 		font-weight: 700;
 	}
 	:global(.allocation-stepper button:hover) {
-		background: #174e40;
+		background: var(--brand);
 		color: #fff;
 	}
 	:global(.allocation-stepper button:focus-visible) {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 	.existing-allocation-inputs {
@@ -901,7 +901,7 @@ import Layout from '../layouts/BlogPost.astro';
 		font-weight: 700;
 	}
 	.allocation-total.is-valid {
-		color: #26735e;
+		color: var(--brand-hover);
 	}
 	.allocation-actions {
 		display: flex;
@@ -910,8 +910,8 @@ import Layout from '../layouts/BlogPost.astro';
 		margin-top: 1.25rem;
 	}
 	.allocation-actions button:last-child {
-		background: #fff;
-		color: #174e40;
+		background: var(--surface);
+		color: var(--brand);
 	}
 	.period-change {
 		margin: 0;
@@ -920,7 +920,7 @@ import Layout from '../layouts/BlogPost.astro';
 		white-space: nowrap;
 	}
 	:global(.period-change.positive) {
-		color: #26735e;
+		color: var(--brand-hover);
 	}
 	:global(.period-change.negative) {
 		color: #a33d2e;
@@ -933,22 +933,22 @@ import Layout from '../layouts/BlogPost.astro';
 	}
 	.range-controls button {
 		min-height: 38px;
-		border: 1px solid #cbd3cd;
+		border: 1px solid var(--border-color);
 		border-radius: 3px;
-		background: #fff;
+		background: var(--surface);
 		padding: 0.45rem 0.7rem;
-		color: #46514c;
+		color: var(--control-color);
 		font: inherit;
 		font-size: 0.8rem;
 		cursor: pointer;
 	}
 	.range-controls button[aria-pressed='true'] {
-		border-color: #174e40;
-		background: #174e40;
+		border-color: var(--brand);
+		background: var(--brand);
 		color: #fff;
 	}
 	.range-controls button:focus-visible {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 	.stock-chart {
@@ -964,21 +964,21 @@ import Layout from '../layouts/BlogPost.astro';
 		visibility: visible;
 	}
 	:global(.stock-chart-grid line) {
-		stroke: #dfe5df;
+		stroke: var(--soft-border);
 		stroke-width: 1;
 		vector-effect: non-scaling-stroke;
 	}
 	:global(.stock-chart-labels) {
-		fill: #78817c;
+		fill: var(--chart-label);
 		font-family: var(--font-atkinson);
 		font-size: 12px;
 	}
 	:global(.stock-chart-area.positive) {
-		fill: #d9eee4;
+		fill: var(--positive-fill);
 		opacity: 0.8;
 	}
 	:global(.stock-chart-area.negative) {
-		fill: #f5dfd9;
+		fill: var(--negative-fill);
 		opacity: 0.8;
 	}
 	:global(.stock-chart-line) {
@@ -989,14 +989,14 @@ import Layout from '../layouts/BlogPost.astro';
 		vector-effect: non-scaling-stroke;
 	}
 	:global(.stock-chart-line.positive) {
-		stroke: #26735e;
+		stroke: var(--brand-hover);
 	}
 	:global(.stock-chart-line.negative) {
 		stroke: #a33d2e;
 	}
 	.chart-footnote {
 		margin: 0.25rem 0 0;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.75rem;
 	}
 	@media (max-width: 520px) {

@@ -271,7 +271,7 @@ const formatEuro = (value: number) =>
 	}
 	.eyebrow {
 		margin: 0 0 1rem;
-		color: #26735e;
+		color: var(--brand-hover);
 		font-family: var(--font-atkinson);
 		font-size: 0.78rem;
 		font-weight: 700;
@@ -289,7 +289,7 @@ const formatEuro = (value: number) =>
 	.intro-copy {
 		max-width: 470px;
 		margin: 1.5rem 0 0;
-		color: #56615d;
+		color: var(--control-color);
 		font-size: 1.05rem;
 	}
 	.growth {
@@ -314,7 +314,7 @@ const formatEuro = (value: number) =>
 	.assumption,
 	.result-note {
 		margin: 0 0 0.2rem;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.85rem;
 	}
 	.result-row {
@@ -326,11 +326,11 @@ const formatEuro = (value: number) =>
 		gap: 0.2rem;
 	}
 	.result-label {
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.83rem;
 	}
 	.result-row strong {
-		color: #174e40;
+		color: var(--brand);
 		font-family: Georgia, 'Times New Roman', serif;
 		font-size: 2.5rem;
 		font-weight: 400;
@@ -347,7 +347,7 @@ const formatEuro = (value: number) =>
 		overflow: visible;
 	}
 	:global(.chart-grid line) {
-		stroke: #dfe5df;
+		stroke: var(--soft-border);
 		stroke-width: 1;
 		vector-effect: non-scaling-stroke;
 	}
@@ -357,7 +357,7 @@ const formatEuro = (value: number) =>
 		gap: 0.65rem 1.5rem;
 		margin: 0.5rem 0 0;
 		padding: 0;
-		color: #56615d;
+		color: var(--control-color);
 		font-size: 0.8rem;
 		list-style: none;
 	}
@@ -372,16 +372,16 @@ const formatEuro = (value: number) =>
 		border-radius: 2px;
 	}
 	.legend-starting {
-		background: #75aa91;
+		background: var(--chart-start);
 	}
 	.legend-contributions {
-		background: #e6bd6a;
+		background: var(--chart-contributions);
 	}
 	.legend-interest {
-		background: #b7ddc7;
+		background: var(--chart-interest);
 	}
 	:global(.chart-labels) {
-		fill: #78817c;
+		fill: var(--chart-label);
 		font-family: var(--font-atkinson);
 		font-size: 12px;
 	}
@@ -389,17 +389,17 @@ const formatEuro = (value: number) =>
 		opacity: 0.88;
 	}
 	:global(.chart-area-starting) {
-		fill: #75aa91;
+		fill: var(--chart-start);
 	}
 	:global(.chart-area-contributions) {
-		fill: #e6bd6a;
+		fill: var(--chart-contributions);
 	}
 	:global(.chart-area-interest) {
-		fill: #b7ddc7;
+		fill: var(--chart-interest);
 	}
 	:global(.chart-line) {
 		fill: none;
-		stroke: #26735e;
+		stroke: var(--brand-hover);
 		stroke-linecap: round;
 		stroke-linejoin: round;
 		stroke-width: 3;
@@ -415,7 +415,7 @@ const formatEuro = (value: number) =>
 	.calculator-copy > p:last-child {
 		max-width: 250px;
 		margin: 0.8rem 0 0;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.9rem;
 	}
 	.calculator form {
@@ -427,7 +427,7 @@ const formatEuro = (value: number) =>
 	.calculator label {
 		display: grid;
 		gap: 0.45rem;
-		color: #46514c;
+		color: var(--control-color);
 		font-size: 0.8rem;
 		font-weight: 700;
 	}
@@ -437,15 +437,15 @@ const formatEuro = (value: number) =>
 		min-width: 0;
 		min-height: 48px;
 		gap: 0.55rem;
-		border: 1px solid #cbd3cd;
+		border: 1px solid var(--border-color);
 		border-radius: 3px;
-		background: #fff;
+		background: var(--surface);
 		padding: 0 0.75rem;
-		color: #68736e;
+		color: var(--muted-color);
 	}
 	.input-wrap:focus-within {
-		border-color: #26735e;
-		box-shadow: 0 0 0 2px #d9eee4;
+		border-color: var(--brand-hover);
+		box-shadow: 0 0 0 2px var(--positive-fill);
 	}
 	.input-wrap input {
 		width: 100%;
@@ -453,7 +453,7 @@ const formatEuro = (value: number) =>
 		border: 0;
 		outline: 0;
 		background: transparent;
-		color: #202a25;
+		color: var(--input-color);
 		font: inherit;
 		font-size: 1rem;
 	}
@@ -471,7 +471,7 @@ const formatEuro = (value: number) =>
 		min-height: 48px;
 		border: 0;
 		border-radius: 3px;
-		background: #174e40;
+		background: var(--brand);
 		padding: 0.75rem 1.1rem;
 		color: #fff;
 		font: inherit;
@@ -480,10 +480,10 @@ const formatEuro = (value: number) =>
 		cursor: pointer;
 	}
 	.calculator button:hover {
-		background: #26735e;
+		background: var(--brand-hover);
 	}
 	.calculator button:focus-visible {
-		outline: 3px solid #95c7ae;
+		outline: 3px solid var(--focus-ring);
 		outline-offset: 3px;
 	}
 	.form-error {
@@ -496,7 +496,7 @@ const formatEuro = (value: number) =>
 		border-top: 1px solid #d7ddd8;
 		margin: 0;
 		padding-top: 1rem;
-		color: #68736e;
+		color: var(--muted-color);
 		font-size: 0.76rem;
 	}
 	@media (max-width: 760px) {
