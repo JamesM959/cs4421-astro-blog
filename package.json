@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "test:unit": "vitest --exclude **/cdk/**",
+    "test:sum": "vitest --exclude **/cdk/**",
     "lint": "eslint ."
   },
   "dependencies": {
