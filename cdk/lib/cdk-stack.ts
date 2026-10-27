@@ -4,7 +4,7 @@ import * as cdk from 'aws-cdk-lib/core';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment'
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 
 export class StaticSiteStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps)  {
@@ -35,13 +35,19 @@ export class StaticSiteStack extends cdk.Stack {
     const distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+        functionAssociations: [
+          {
+            function: rewriteFunction,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
       defaultRootObject: 'index.html',
     });
 
     // Output the distribution URL
     new s3deploy.BucketDeployment(this, 'DeploySite', {
-      sources: [s3deploy.Source.asset(path.join(__dirname, '../../dist'))],
+      sources: [s3deploy.Source.asset(path.join(__dirname, '../../dist/client'))],
       destinationBucket: bucket,
       distribution,
       distributionPaths: ['/*'], // Automatic CloudFront CDN cache invalidation!
