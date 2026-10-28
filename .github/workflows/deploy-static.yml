@@ -20,7 +20,7 @@ jobs:
         run: npm ci
 
       - name: Build Astro Static Site
-        run: npm run build
+        run: npm run build:static
 
       - name: Change to CDK folder
         working-directory: cdk
