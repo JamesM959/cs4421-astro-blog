@@ -6,13 +6,36 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 import node from '@astrojs/node';
 
+const staticPages = new Set([
+  'src/pages/about.astro',
+  'src/pages/blog/[...slug].astro',
+  'src/pages/index.astro',
+  'src/pages/login.astro',
+  'src/pages/portfolio.astro',
+  'src/pages/rss.xml.js',
+  'src/pages/signup.astro',
+  'src/pages/watchlist.astro',
+]);
+
+/** @type {import('astro').AstroIntegration} */
+const staticSitePrerender = {
+  name: 'static-site-prerender',
+  hooks: {
+    'astro:route:setup'({ route }) {
+      if (process.env.STATIC_SITE_BUILD === 'true' && staticPages.has(route.component)) {
+        route.prerender = true;
+      }
+    },
+  },
+};
+
 // https://astro.build/config
 export default defineConfig({
   site: 'https://example.com',
   devToolbar: {
     enabled: false,
   },
-  integrations: [mdx(), sitemap()],
+  integrations: [mdx(), sitemap(), staticSitePrerender],
 
   fonts: [
       {
