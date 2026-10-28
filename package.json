@@ -9,6 +9,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "build:static": "STATIC_SITE_BUILD=true astro build",
+    "test:static-build": "node unittests/static-smoke.mjs",
     "check": "astro check",
     "preview": "astro preview",
     "astro": "astro",
