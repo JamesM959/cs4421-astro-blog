@@ -29,7 +29,7 @@
     "esbuild": true
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
+    "@astrojs/check": "^0.9.12",
     "eslint": "^10.12.0",
     "eslint-plugin-astro": "^3.2.1",
     "typescript": "^6.0.3",
